@@ -1,0 +1,5 @@
+D:\GitHub\CSharpRobots\POC\bin\Debug\POC.dll
+D:\GitHub\CSharpRobots\POC\bin\Debug\POC.pdb
+D:\GitHub\CSharpRobots\POC\obj\Debug\POC.csprojResolveAssemblyReference.cache
+D:\GitHub\CSharpRobots\POC\obj\Debug\POC.dll
+D:\GitHub\CSharpRobots\POC\obj\Debug\POC.pdb
