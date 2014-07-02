@@ -1,0 +1,8 @@
+﻿<Window x:Class="GUI_POC.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow" Height="525" Width="525">
+    <Grid>
+        <Canvas x:Name="ArenaCanvas" Width="500" Height="500" PreviewMouseDown="ArenaCanvas_PreviewMouseDown"/>
+    </Grid>
+</Window>
