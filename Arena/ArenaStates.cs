@@ -3,7 +3,9 @@
     public enum ArenaStates
     {
         Created,
-        Started,
+        Running,
+        NoWinner,
+        Winner,
         Stopped,
         Error,
     }

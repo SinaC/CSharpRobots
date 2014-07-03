@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace Common.Clock
 {
@@ -8,7 +9,7 @@ namespace Common.Clock
 
         private Tick()
         {
-            _value = DateTime.Now;
+            _value = HiResDateTime.UtcNow;
         }
 
         public static Tick Now
@@ -16,24 +17,48 @@ namespace Common.Clock
             get { return new Tick(); }
         }
 
-        public static int TotalSeconds(Tick t1, Tick t2)
+        public static double TotalSeconds(Tick t1, Tick t2)
         {
-            return (int) (t1._value - t2._value).TotalSeconds;
+            return (t1._value - t2._value).TotalSeconds;
         }
 
-        public static int ElapsedSeconds(Tick t)
+        public static double ElapsedSeconds(Tick t)
         {
-            return (int) (DateTime.Now - t._value).TotalSeconds;
+            return (HiResDateTime.UtcNow - t._value).TotalSeconds;
         }
 
-        public static int TotalMilliseconds(Tick t1, Tick t2)
+        public static double TotalMilliseconds(Tick t1, Tick t2)
         {
-            return (int)(t1._value - t2._value).TotalMilliseconds;
+            return (t1._value - t2._value).TotalMilliseconds;
         }
 
-        public static int ElapsedMilliseconds(Tick t)
+        public static double ElapsedMilliseconds(Tick t)
         {
-            return (int)(DateTime.Now - t._value).TotalMilliseconds;
+            return (HiResDateTime.UtcNow - t._value).TotalMilliseconds;
+        }
+    }
+
+    //http://stackoverflow.com/questions/1416139/how-to-get-timestamp-of-tick-precision-in-net-c
+    internal static class HiResDateTime
+    {
+        private static DateTime _startTime;
+        private static Stopwatch _stopWatch;
+        private static readonly TimeSpan MaxIdle = TimeSpan.FromSeconds(10);
+
+        public static DateTime UtcNow
+        {
+            get
+            {
+                if (_stopWatch == null || _startTime.Add(MaxIdle) < DateTime.UtcNow)
+                    Reset();
+                return _startTime.AddTicks(_stopWatch.Elapsed.Ticks);
+            }
+        }
+
+        private static void Reset()
+        {
+            _startTime = DateTime.UtcNow;
+            _stopWatch = Stopwatch.StartNew();
         }
     }
 }

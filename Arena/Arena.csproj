@@ -38,6 +38,7 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ArenaModes.cs" />
     <Compile Include="ArenaStates.cs" />
     <Compile Include="Internal\Arena.cs" />
     <Compile Include="Factory.cs" />

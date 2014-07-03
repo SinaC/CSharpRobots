@@ -40,6 +40,7 @@
     <Compile Include="Rook.cs" />
     <Compile Include="Follower.cs" />
     <Compile Include="Sniper.cs" />
+    <Compile Include="Surveyor.cs" />
     <Compile Include="Target.cs" />
   </ItemGroup>
   <ItemGroup>

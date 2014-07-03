@@ -47,6 +47,10 @@
       <Project>{f3d036a3-b256-49d2-8f75-8d008813c644}</Project>
       <Name>Arena</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Common\Common.csproj">
+      <Project>{c5122582-e824-46b3-ba1f-0831a4a5b57f}</Project>
+      <Name>Common</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Robots\Robots.csproj">
       <Project>{cf86e262-00af-410c-b4ca-c9085048959e}</Project>
       <Name>Robots</Name>

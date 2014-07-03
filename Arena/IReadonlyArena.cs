@@ -1,20 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using Common.Clock;
 
 namespace Arena
 {
     public interface IReadonlyArena
     {
         ArenaStates State { get; }
+        ArenaModes Mode { get; }
+
+        Tick MatchStart { get; }
 
         int ArenaSize { get; }
 
-        IEnumerable<IReadonlyRobot> Robots { get; }
-        IEnumerable<IReadonlyMissile> Missiles { get; }
+        int WinningTeam { get; }
 
-        void StartTest(Type robotType);
-        void StartTest(Type robotType1, int locX1, int locY1, Type robotType2, int locX2, int locY2);
+        List<IReadonlyRobot> Robots { get; }
+        List<IReadonlyMissile> Missiles { get; }
 
+        void StartSolo(Type robotType, int locX, int locY, int heading, int speed);
         void StartSingleMatch(Type team1, Type team2);
         void StartDoubleMatch(Type team1, Type team2);
         void StartTeamMatch(Type team1, Type team2, Type team3, Type team4);

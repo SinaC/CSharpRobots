@@ -69,6 +69,30 @@ namespace Arena.Internal
             System.Diagnostics.Debug.WriteLine("Robot {0} | {1} initialized.", Id, Team);
         }
 
+        public void Initialize(SDK.Robot userRobot, Arena arena, int id, int team, int locX, int locY, int heading, int speed)
+        {
+            _userRobot = userRobot;
+            _userRobot.SDK = this;
+            _arena = arena;
+            Id = id;
+            Team = team;
+            RawLocX = locX;
+            RawLocY = locY;
+            Damage = 0;
+            Speed = speed;
+
+            Heading = heading;
+            DesiredHeading = heading;
+            DesiredSpeed = speed;
+            OriginX = locX;
+            OriginY = LocY;
+            Range = 0;
+
+            State = RobotStates.Initialized;
+
+            System.Diagnostics.Debug.WriteLine("Robot {0} | {1} initialized.", Id, Team);
+        }
+
         public void Start(Tick matchStart)
         {
             try
@@ -185,18 +209,20 @@ namespace Arena.Internal
             }
         }
 
-        public void UpdateLocation()
+        public void UpdateLocation(double realDelay)
         {
             // Update distance traveled on this heading, x, y
             if (Speed > 0)
             {
-                Range += (Speed*_arena.StepDelay)/1000.0; // new speed is considered only once by simulation step
+                //Range += ((MaxSpeed*Speed/100.0)*Arena.StepDelay)/1000.0; // new speed is considered only once by simulation step   GRRRRRR 2 hours lost to find we have to compute real elapsed time between 2 steps because System.Timers.Timer is not precise enough
+                // Speed is in percentage of MaxSpeed, realDelay is in milliseconds and MaxSpeed is in m/s
+                Range += ((MaxSpeed * Speed / 100.0) * realDelay) / 1000.0; // new speed is considered only once by simulation step
                 double newX, newY;
                 Common.Helpers.Math.ComputePoint(OriginX, OriginY, Range, Heading, out newX, out newY);
                 RawLocX = newX;
                 RawLocY = newY;
 
-                System.Diagnostics.Debug.WriteLine("Robot {0} | {1} location updated. Range {2} OriginX {3} OriginY {4} RawLocX {5} RawLocY {6} Heading {7}", Id, Team, Range, OriginX, OriginY, RawLocX, RawLocY, Heading);
+                System.Diagnostics.Debug.WriteLine("Robot {0} | {1} location updated. Range {2} OriginX {3} OriginY {4} RawLocX {5} RawLocY {6} Heading {7} Speed {8}", Id, Team, Range, OriginX, OriginY, RawLocX, RawLocY, Heading, Speed);
             }
         }
 
@@ -259,12 +285,12 @@ namespace Arena.Internal
 
         public double Time
         {
-            get { return Tick.ElapsedSeconds(_matchStart); }
+            get { return Tick.ElapsedMilliseconds(_matchStart) / 1000.0; }
         }
 
         public int Cannon(int degrees, int range)
         {
-            System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Cannon {2} {3}.", Id, Team, degrees, range);
+            //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Cannon {2} {3}.", Id, Team, degrees, range);
 
             degrees = FixDegrees(degrees);
             range = FixCannonRange(range);
@@ -276,7 +302,7 @@ namespace Arena.Internal
 
         public void Drive(int degrees, int speed)
         {
-            System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Drive {2} {3}.", Id, Team, degrees, speed);
+            //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Drive {2} {3}.", Id, Team, degrees, speed);
 
             degrees = FixDegrees(degrees);
             speed = FixSpeed(speed);
@@ -287,7 +313,7 @@ namespace Arena.Internal
 
         public int Scan(int degrees, int resolution)
         {
-            System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Scan {2} {3}.", Id, Team, degrees, resolution);
+            //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Scan {2} {3}.", Id, Team, degrees, resolution);
 
             degrees = FixDegrees(degrees);
             resolution = FixResolution(resolution);

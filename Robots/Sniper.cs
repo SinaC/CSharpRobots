@@ -100,11 +100,11 @@ namespace Robots
 
             SDK.Drive(angle, 100);
 
-            while (Distance(SDK.LocX, SDK.LocY, x, y) > 100 && SDK.Speed > 0)
+            while (Distance(SDK.LocX, SDK.LocY, x, y) > 100)// && SDK.Speed > 0)
                 ;
 
             SDK.Drive(angle, 10);
-            while (Distance(SDK.LocX, SDK.LocY, x, y) > 20 && SDK.Speed > 0)
+            while (Distance(SDK.LocX, SDK.LocY, x, y) > 20)// && SDK.Speed > 0)
                 ;
 
             SDK.Drive(angle, 0);

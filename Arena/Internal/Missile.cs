@@ -63,7 +63,7 @@ namespace Arena.Internal
         public void UpdatePosition()
         {
             // Update distance
-            CurrentDistance += (MissileSpeed*_arena.StepDelay)/1000.0;
+            CurrentDistance += (MissileSpeed*Arena.StepDelay)/1000.0;
             if (CurrentDistance > Range) // if missile goes too far, get it back :)
                 CurrentDistance = Range;
             // Update location
