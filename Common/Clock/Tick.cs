@@ -25,5 +25,15 @@ namespace Common.Clock
         {
             return (int) (DateTime.Now - t._value).TotalSeconds;
         }
+
+        public static int TotalMilliseconds(Tick t1, Tick t2)
+        {
+            return (int)(t1._value - t2._value).TotalMilliseconds;
+        }
+
+        public static int ElapsedMilliseconds(Tick t)
+        {
+            return (int)(DateTime.Now - t._value).TotalMilliseconds;
+        }
     }
 }

@@ -18,7 +18,8 @@ namespace Robots
             int course = PlotCourse(destX, destY);
             SDK.Drive(course, 50);
             while (Distance(SDK.LocX, SDK.LocY, destX, destY) > 50) 
-                ;
+                if (SDK.Speed == 0) // stopped by collision with another robot
+                    SDK.Drive(course, 50);
             SDK.Drive(course, 0);
             while (SDK.Speed > 0) 
                 ;

@@ -13,18 +13,24 @@ namespace Robots
         {
             if (SDK.LocY < 500)
             {
+                System.Diagnostics.Debug.WriteLine("Going top");
+
                 SDK.Drive(90, 70);
                 while (SDK.LocY - 500 < 20 && SDK.Speed > 0)
                     ;
             }
             else
             {
+                System.Diagnostics.Debug.WriteLine("Going down");
+
                 SDK.Drive(270, 70);
                 while (SDK.LocY - 500 > 20 && SDK.Speed > 0)
                     ;
             }
+            System.Diagnostics.Debug.WriteLine("Stopping");
             SDK.Drive(0, 0);
 
+            System.Diagnostics.Debug.WriteLine("Main loop");
             _damage = SDK.Damage;
             _course = 0;
             _boundary = 995;
@@ -55,6 +61,8 @@ namespace Robots
         {
             int range;
 
+            System.Diagnostics.Debug.WriteLine("Look {0}", deg);
+
             while ((range = SDK.Scan(deg, 2)) > 0 && range <= 700)
             {
                 SDK.Drive(_course, 0);
@@ -70,6 +78,8 @@ namespace Robots
 
         private void Change()
         {
+            System.Diagnostics.Debug.WriteLine("Changing course");
+
             if (_course == 0)
             {
                 _boundary = 5;

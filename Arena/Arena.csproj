@@ -38,10 +38,17 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Arena.cs" />
-    <Compile Include="InternalRobot.cs" />
+    <Compile Include="ArenaStates.cs" />
+    <Compile Include="Internal\Arena.cs" />
+    <Compile Include="Factory.cs" />
+    <Compile Include="IReadonlyMissile.cs" />
+    <Compile Include="Internal\Robot.cs" />
+    <Compile Include="IReadonlyArena.cs" />
+    <Compile Include="IReadonlyRobot.cs" />
+    <Compile Include="Internal\Missile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="IArena.cs" />
+    <Compile Include="MissileStates.cs" />
+    <Compile Include="RobotStates.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj">

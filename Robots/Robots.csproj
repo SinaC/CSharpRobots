@@ -34,9 +34,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Counter.cs" />
+    <Compile Include="CrazyCannon.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rabbit.cs" />
     <Compile Include="Rook.cs" />
+    <Compile Include="Follower.cs" />
     <Compile Include="Sniper.cs" />
     <Compile Include="Target.cs" />
   </ItemGroup>

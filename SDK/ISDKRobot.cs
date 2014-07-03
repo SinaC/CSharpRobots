@@ -2,7 +2,7 @@
 {
     //http://jrobots.sourceforge.net/jjr_info.shtml
 
-    public interface IRobot
+    public interface ISDKRobot
     {
         /// <summary>
         /// Returns the damage points of the robot: 0 to 99 means alive, 100 means dead (the robot will never read this value).

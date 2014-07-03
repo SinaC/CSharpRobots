@@ -22,7 +22,7 @@ namespace GUI_POC
     {
         public const double CenterX = 250;
         public const double CenterY = 250;
-        public const int SectorAngle = 350;
+        public const int SectorAngle = 70;
         public const int SectorResolution = 20;
 
         public MainWindow()
@@ -40,7 +40,7 @@ namespace GUI_POC
             Canvas.SetTop(background, 0);
             ArenaCanvas.Children.Add(background);
 
-            for (int i = 0; i < 360; i+=10)
+            for (int i = 0; i < 360; i += 10)
                 ComputeAndDisplayPoint(i, CenterX, CenterY);
 
             DisplaySector(CenterX, CenterY, SectorAngle, SectorResolution);
@@ -58,8 +58,19 @@ namespace GUI_POC
         private void DisplayText(int degrees, double x, double y)
         {
             TextBlock textBlock = new TextBlock
+                {
+                    Text = String.Format("{0}", degrees)
+                };
+            Canvas.SetLeft(textBlock, x);
+            Canvas.SetTop(textBlock, y);
+            ArenaCanvas.Children.Add(textBlock);
+        }
+
+        private void DisplayText(string txt, double x, double y)
+        {
+            TextBlock textBlock = new TextBlock
             {
-                Text = String.Format("{0}", degrees)
+                Text = txt
             };
             Canvas.SetLeft(textBlock, x);
             Canvas.SetTop(textBlock, y);
@@ -70,8 +81,8 @@ namespace GUI_POC
         {
             const double arbitratryLength = 200.0;
 
-            double angleFromDegrees = (degrees - resolution / 2.0);
-            double angleToDegrees = (degrees + resolution / 2.0);
+            double angleFromDegrees = (degrees - resolution/2.0);
+            double angleToDegrees = (degrees + resolution/2.0);
 
             double pointFromX, pointFromY;
             ComputePoint(centerX, centerY, arbitratryLength, angleFromDegrees, out pointFromX, out pointFromY);
@@ -89,44 +100,79 @@ namespace GUI_POC
             Canvas.SetTop(path, 0);
             ArenaCanvas.Children.Add(path);
 
-            DisplayText((int)angleFromDegrees, pointFromX, pointFromY);
-            DisplayText((int)angleToDegrees, pointToX, pointToY);
+            DisplayText((int) angleFromDegrees, pointFromX, pointFromY);
+            DisplayText((int) angleToDegrees, pointToX, pointToY);
         }
 
-        private static bool CheckSector(double centerX, double centerY, int degrees, int resolution, double pointX, double pointY)
+        private bool CheckSector(double centerX, double centerY, int degrees, int resolution, double pointX, double pointY)
         {
-            const double arbitratryLength = 1000.0; // greater than battlefield
+            const double arbitratryLength = 250.0; // greater than battlefield
 
-            double angleFromDegrees = (degrees - resolution / 2.0);
-            double angleToDegrees = (degrees + resolution / 2.0);
+            double angleFromDegrees = (degrees - resolution/2.0);
+            double angleToDegrees = (degrees + resolution/2.0);
 
             double pointFromX, pointFromY;
             ComputePoint(centerX, centerY, arbitratryLength, angleFromDegrees, out pointFromX, out pointFromY);
             double pointToX, pointToY;
             ComputePoint(centerX, centerY, arbitratryLength, angleToDegrees, out pointToX, out pointToY);
 
+            DisplayText("from", pointFromX, pointFromY);
+            DisplayText("to", pointToX, pointToY);
+
             return IsPointInTriangle(pointX, pointY, centerX, centerY, pointFromX, pointFromY, pointToX, pointToY);
         }
 
         private static double Sign(double p1X, double p1Y, double p2X, double p2Y, double p3X, double p3Y)
         {
-            return (p1X - p3X) * (p2Y - p3Y) - (p2X - p3X) * (p1Y - p3Y);
+            return (p1X - p3X)*(p2Y - p3Y) - (p2X - p3X)*(p1Y - p3Y);
         }
 
-        private static bool IsPointInTriangle(double ptX, double ptY, double v1X, double v1Y, double v2X, double v2Y, double v3X, double v3Y)
+        private static int _posY = 0;
+
+        private bool IsPointInTriangle2(double ptX, double ptY, double v1X, double v1Y, double v2X, double v2Y, double v3X, double v3Y)
         {
-            bool b1 = Sign(ptX, ptY, v1X, v1Y, v2X, v2Y) < 0.0f;
+            bool b1 = Sign(ptX, ptY, v1X, v1Y, v2X, v2Y) > 0.0f;
             bool b2 = Sign(ptX, ptY, v2X, v2X, v3X, v3Y) < 0.0f;
-            bool b3 = Sign(ptX, ptY, v3X, v3Y, v1X, v1Y) < 0.0f;
+            bool b3 = Sign(ptX, ptY, v3X, v3Y, v1X, v1Y) > 0.0f;
+
+            DisplayText(String.Format("{0}{1}{2}", b1, b2, b3), 10, _posY);
+            _posY += 10;
 
             return (b1 == b2) && (b2 == b3);
+        }
+
+        private bool IsPointInTriangle(double ptX, double ptY, double t1X, double t1Y, double t2X, double t2Y, double t3X, double t3Y)
+        {
+            //http://www.blackpawn.com/texts/pointinpoly/
+            // Compute vectors        
+            double v0X = t3X - t1X;
+            double v0Y = t3Y - t1Y;
+            double v1X = t2X - t1X;
+            double v1Y = t2Y - t1Y;
+            double v2X = ptX - t1X;
+            double v2Y = ptY - t1Y;
+
+            // Compute dot products
+            double dot00 = v0X*v0X + v0Y*v0Y;
+            double dot01 = v0X*v1X + v0Y*v1Y;
+            double dot02 = v0X*v2X + v0Y*v2Y;
+            double dot11 = v1X*v1X + v1Y*v1Y;
+            double dot12 = v1X*v2X + v1Y*v2Y;
+
+            // Compute barycentric coordinates
+            double invDenom = 1.0/(dot00*dot11 - dot01*dot01);
+            double u = (dot11*dot02 - dot01*dot12)*invDenom;
+            double v = (dot00*dot12 - dot01*dot02)*invDenom;
+
+            // Check if point is in triangle
+            return (u >= 0) && (v >= 0) && (u + v < 1);
         }
 
         private static void ComputePoint(double centerX, double centerY, double distance, double degrees, out double x, out double y)
         {
             double radians = degrees*Math.PI/180.0;
             x = centerX + distance*Math.Cos(radians);
-            y = centerY - distance * Math.Sin(radians);
+            y = centerY + distance*Math.Sin(radians);
         }
 
         private void ArenaCanvas_PreviewMouseDown(object sender, MouseButtonEventArgs e)

@@ -23,25 +23,39 @@
         {
             double radians = degrees * System.Math.PI / 180.0;
             x = centerX + distance * System.Math.Cos(radians);
-            y = centerY - distance * System.Math.Sin(radians);
+            y = centerY + distance * System.Math.Sin(radians);
         }
 
-        private static double Sign(double p1X, double p1Y, double p2X, double p2Y, double p3X, double p3Y)
+        private static bool IsPointInTriangle(double ptX, double ptY, double t1X, double t1Y, double t2X, double t2Y, double t3X, double t3Y)
         {
-            return (p1X - p3X) * (p2Y - p3Y) - (p2X - p3X) * (p1Y - p3Y);
-        }
+            //http://www.blackpawn.com/texts/pointinpoly/
+            // Compute vectors        
+            double v0X = t3X - t1X;
+            double v0Y = t3Y - t1Y;
+            double v1X = t2X - t1X;
+            double v1Y = t2Y - t1Y;
+            double v2X = ptX - t1X;
+            double v2Y = ptY - t1Y;
 
-        private static bool IsPointInTriangle(double ptX, double ptY, double v1X, double v1Y, double v2X, double v2Y, double v3X, double v3Y)
-        {
-            bool b1 = Sign(ptX, ptY, v1X, v1Y, v2X, v2Y) < 0.0f;
-            bool b2 = Sign(ptX, ptY, v2X, v2X, v3X, v3Y) < 0.0f;
-            bool b3 = Sign(ptX, ptY, v3X, v3Y, v1X, v1Y) < 0.0f;
+            // Compute dot products
+            double dot00 = v0X * v0X + v0Y * v0Y;
+            double dot01 = v0X * v1X + v0Y * v1Y;
+            double dot02 = v0X * v2X + v0Y * v2Y;
+            double dot11 = v1X * v1X + v1Y * v1Y;
+            double dot12 = v1X * v2X + v1Y * v2Y;
 
-            return (b1 == b2) && (b2 == b3);
+            // Compute barycentric coordinates
+            double invDenom = 1.0 / (dot00 * dot11 - dot01 * dot01);
+            double u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+            double v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+            // Check if point is in triangle
+            return (u >= 0) && (v >= 0) && (u + v < 1);
         }
 
         public static bool IsInSector(double centerX, double centerY, int degrees, int resolution, double pointX, double pointY)
         {
+            // Simulate a triangle bigger than sector and check on that triangle
             const double arbitratryLength = 2000.0; // greater than battlefield
 
             double angleFromDegrees = (degrees - resolution / 2.0);
