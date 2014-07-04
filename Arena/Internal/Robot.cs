@@ -22,23 +22,21 @@ namespace Arena.Internal
         private Arena _arena;
         private SDK.Robot _userRobot;
         private Tick _matchStart;
+        
+        // These values are modified by Drive and used to compute acceleration/range/speed/location
+        private int _desiredHeading;
+        private int _desiredSpeed;
+        //
+        private double _acceleration; // Linear acceleration in m/s
+        // Following values are needed to avoid precision problem while computing new location
+        private double _originX; // X-component before changing heading
+        private double _originY; // Y-component before changing heading
+        private double _currentDistance; // Distance traveled in this heading
 
         public Tick LastMissileLaunchTick { get; private set; }
 
         public double RawLocX { get; private set; }
         public double RawLocY { get; private set; }
-
-        // These values are modified by Drive and used by Arena to compute acceleration/range/speed/location
-        public int DesiredHeading { get; private set; }
-        public int DesiredSpeed { get; private set; }
-
-        //
-        public int Acceleration { get; private set; } // Linear acceleration
-
-        // Following values are needed to avoid precision problem while computing new location
-        public double OriginX { get; private set; } // X-component before changing heading
-        public double OriginY { get; private set; } // Y-component before changing heading
-        public double Range { get; private set; } // Distance traveled in this heading
 
         public Robot()
         {
@@ -58,11 +56,11 @@ namespace Arena.Internal
             Speed = 0;
 
             Heading = 0;
-            DesiredHeading = 0;
-            DesiredSpeed = 0;
-            OriginX = locX;
-            OriginY = LocY;
-            Range = 0;
+            _desiredHeading = 0;
+            _desiredSpeed = 0;
+            _originX = locX;
+            _originY = LocY;
+            _currentDistance = 0;
 
             State = RobotStates.Initialized;
 
@@ -82,11 +80,11 @@ namespace Arena.Internal
             Speed = speed;
 
             Heading = heading;
-            DesiredHeading = heading;
-            DesiredSpeed = speed;
-            OriginX = locX;
-            OriginY = LocY;
-            Range = 0;
+            _desiredHeading = heading;
+            _desiredSpeed = speed;
+            _originX = locX;
+            _originY = LocY;
+            _currentDistance = 0;
 
             State = RobotStates.Initialized;
 
@@ -147,40 +145,40 @@ namespace Arena.Internal
             }
         }
 
-        public void UpdateSpeed()
+        public void UpdateSpeed(double realStepTime)
         {
             // Update speed, moderated by acceleration
-            if (Speed != DesiredSpeed)
+            if (Speed != _desiredSpeed)
             {
-                if (Speed > DesiredSpeed) // Slowing
+                if (Speed > _desiredSpeed) // Slowing
                 {
-                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowing. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, DesiredSpeed, Acceleration);
+                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowing. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
 
-                    Acceleration -= MaxAcceleration;
-                    if (Acceleration < DesiredSpeed)
+                    _acceleration -= MaxAcceleration;
+                    if (_acceleration < _desiredSpeed)
                     {
-                        Speed = DesiredSpeed;
-                        Acceleration = DesiredSpeed;
+                        Speed = _desiredSpeed;
+                        _acceleration = _desiredSpeed;
                     }
                     else
-                        Speed = Acceleration;
+                        Speed = (int)_acceleration;
 
-                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowed. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, DesiredSpeed, Acceleration);
+                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowed. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
                 }
                 else // Accelerating
                 {
-                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerating. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, DesiredSpeed, Acceleration);
+                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerating. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
 
-                    Acceleration += MaxAcceleration;
-                    if (Acceleration > DesiredSpeed)
+                    _acceleration += MaxAcceleration;
+                    if (_acceleration > _desiredSpeed)
                     {
-                        Speed = DesiredSpeed;
-                        Acceleration = DesiredSpeed;
+                        Speed = _desiredSpeed;
+                        _acceleration = _desiredSpeed;
                     }
                     else
-                        Speed = Acceleration;
+                        Speed = (int)_acceleration;
 
-                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerated. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, DesiredSpeed, Acceleration);
+                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerated. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
                 }
             }
         }
@@ -188,41 +186,41 @@ namespace Arena.Internal
         public void UpdateHeading()
         {
             // Update heading, allow change below a certain speed
-            if (Heading != DesiredHeading)
+            if (Heading != _desiredHeading)
             {
-                System.Diagnostics.Debug.WriteLine("Robot {0} | {1} updating heading. Heading {2} Desired Heading {3} RawLocX {4} RawLocY {5} Speed {6}", Id, Team, Heading, DesiredHeading, RawLocX, RawLocY, Speed);
+                System.Diagnostics.Debug.WriteLine("Robot {0} | {1} updating heading. Heading {2} Desired Heading {3} RawLocX {4} RawLocY {5} Speed {6}", Id, Team, Heading, _desiredHeading, RawLocX, RawLocY, Speed);
 
                 if (Speed <= MaxTurnSpeed)
                 {
-                    Heading = DesiredHeading;
-                    Range = 0;
-                    OriginX = RawLocX;
-                    OriginY = RawLocY;
+                    Heading = _desiredHeading;
+                    _currentDistance = 0;
+                    _originX = RawLocX;
+                    _originY = RawLocY;
 
-                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} heading updated. Heading {2} Desired Heading {3} OriginX {4} OriginY {5} Speed {6}", Id, Team, Heading, DesiredHeading, OriginX, OriginY, Speed);
+                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} heading updated. Heading {2} Desired Heading {3} OriginX {4} OriginY {5} Speed {6}", Id, Team, Heading, _desiredHeading, _originX, _originY, Speed);
                 }
                 else
                 {
                     System.Diagnostics.Debug.WriteLine("Robot {0} | {1} moving too fast, cannot update Heading", Id, Team);
-                    DesiredSpeed = 0;
+                    _desiredSpeed = 0;
                 }
             }
         }
 
-        public void UpdateLocation(double realDelay)
+        public void UpdateLocation(double realStepTime)
         {
             // Update distance traveled on this heading, x, y
             if (Speed > 0)
             {
-                //Range += ((MaxSpeed*Speed/100.0)*Arena.StepDelay)/1000.0; // new speed is considered only once by simulation step   GRRRRRR 2 hours lost to find we have to compute real elapsed time between 2 steps because System.Timers.Timer is not precise enough
-                // Speed is in percentage of MaxSpeed, realDelay is in milliseconds and MaxSpeed is in m/s
-                Range += ((MaxSpeed * Speed / 100.0) * realDelay) / 1000.0; // new speed is considered only once by simulation step
+                //CurrentDistance += ((MaxSpeed*Speed/100.0)*Arena.StepDelay)/1000.0; // new speed is considered only once by simulation step   GRRRRRR 2 hours lost to find we have to compute real elapsed time between 2 steps because System.Timers.Timer is not precise enough
+                // Speed is in percentage of MaxSpeed, realStepTime is in milliseconds and MaxSpeed is in m/s
+                _currentDistance += ((MaxSpeed * Speed / 100.0) * realStepTime) / 1000.0;
                 double newX, newY;
-                Common.Helpers.Math.ComputePoint(OriginX, OriginY, Range, Heading, out newX, out newY);
+                Common.Helpers.Math.ComputePoint(_originX, _originY, _currentDistance, Heading, out newX, out newY);
                 RawLocX = newX;
                 RawLocY = newY;
 
-                System.Diagnostics.Debug.WriteLine("Robot {0} | {1} location updated. Range {2} OriginX {3} OriginY {4} RawLocX {5} RawLocY {6} Heading {7} Speed {8}", Id, Team, Range, OriginX, OriginY, RawLocX, RawLocY, Heading, Speed);
+                //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} location updated. CurrentDistance {2} OriginX {3} OriginY {4} RawLocX {5} RawLocY {6} Heading {7} Speed {8}", Id, Team, _currentDistance, _originX, _originY, RawLocX, RawLocY, Heading, Speed);
             }
         }
 
@@ -241,7 +239,7 @@ namespace Arena.Internal
         {
             TakeDamage(damage);
             Speed = 0;
-            DesiredSpeed = 0;
+            _desiredSpeed = 0;
         }
 
         public void CollisionWall(int damage, double newLocX, double newLocY)
@@ -297,7 +295,9 @@ namespace Arena.Internal
             if (LastMissileLaunchTick != null && Tick.ElapsedSeconds(LastMissileLaunchTick) < 1)
                 return 0; // reload
             LastMissileLaunchTick = Tick.Now;
-            return _arena.Cannon(this, LastMissileLaunchTick, degrees, range);
+            int result = _arena.Cannon(this, LastMissileLaunchTick, degrees, range);
+            Thread.Sleep(1);
+            return result;
         }
 
         public void Drive(int degrees, int speed)
@@ -306,9 +306,10 @@ namespace Arena.Internal
 
             degrees = FixDegrees(degrees);
             speed = FixSpeed(speed);
-            DesiredHeading = degrees;
-            DesiredSpeed = speed;
+            _desiredHeading = degrees;
+            _desiredSpeed = speed;
             _arena.Drive(this, degrees, speed);
+            Thread.Sleep(1);
         }
 
         public int Scan(int degrees, int resolution)
@@ -317,7 +318,9 @@ namespace Arena.Internal
 
             degrees = FixDegrees(degrees);
             resolution = FixResolution(resolution);
-            return _arena.Scan(this, degrees, resolution);
+            int result = _arena.Scan(this, degrees, resolution);
+            Thread.Sleep(1);
+            return result;
         }
 
         public int FriendsCount

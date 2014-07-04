@@ -12,12 +12,16 @@
             double lastX = initX;
             double lastY = initY;
 
-            //SDK.Drive(0, 100);
+            int previousSpeed = 0;
+
+            SDK.Drive(0, 100);
+
             while(true)
             {
                 double currentTime = SDK.Time;
                 int currentX = SDK.LocX;
                 int currentY = SDK.LocY;
+                int currentSpeed = SDK.Speed;
 
                 //System.Diagnostics.Debug.WriteLine("Speed X:{0:0.0000} Y:{1:0.0000} - Time {2:0.0000}", speedX, speedY, diffTime);
 
@@ -34,11 +38,16 @@
                     double actualSpeedX = (currentX - lastX) / diffLastTime;
                     double actualSpeedY = (currentY - lastY) / diffLastTime;
 
-                    System.Diagnostics.Debug.WriteLine("Actual Speed X:{0:0.00} Y:{1:0.00} - Time {2:0.00}  diff X:{3:0.00} Y:{4:0.00}  Dmg:{5}", actualSpeedX, actualSpeedY, diffTime, diffX, diffY, SDK.Damage);
+                    int diffSpeed = currentSpeed - previousSpeed;
+                    double acceleration = diffSpeed / diffLastTime;
+
+                    System.Diagnostics.Debug.WriteLine("Instant speed X:{0:0.00} Y:{1:0.00} - Time {2:0.00}  diff X:{3:0.00} Y:{4:0.00}  Dmg:{5}", actualSpeedX, actualSpeedY, diffTime, diffX, diffY, SDK.Damage);
+                    System.Diagnostics.Debug.WriteLine("Acceleration {0:0.0000}", acceleration);
 
                     lastTime = currentTime;
                     lastX = currentX;
                     lastY = currentY;
+                    previousSpeed = currentSpeed;
                 }
             }
         }

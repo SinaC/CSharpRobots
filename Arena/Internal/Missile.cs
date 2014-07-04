@@ -6,13 +6,13 @@ namespace Arena.Internal
     {
         public static readonly int MissileSpeed = 300; // in m/s
 
-        private Arena _arena;
+        private Tick _launchTick;
 
         // When a missile has exploded, it stays in state Explosed during x milliseconds
         private Tick _explosionTick;
 
         // Current distance
-        internal double CurrentDistance { get; private set; }
+        public double CurrentDistance { get; private set; }
 
         public double LaunchLocX { get; private set; }
         public double LaunchLocY { get; private set; }
@@ -22,6 +22,9 @@ namespace Arena.Internal
         public double LocY { get; private set; }
 
         #region IReadonlyMissile
+
+        // Id
+        public int Id { get; private set; }
 
         // State
         public MissileStates State { get; private set; }
@@ -42,12 +45,14 @@ namespace Arena.Internal
 
         #endregion
 
-        internal Missile(Arena arena, IReadonlyRobot robot, double locX, double locY, int heading, int range)
+        internal Missile(IReadonlyRobot robot, int id, double locX, double locY, int heading, int range)
         {
-            _arena = arena;
+            _launchTick = Tick.Now;
 
             Robot = robot;
-            
+
+            Id = id;
+
             LaunchLocX = locX;
             LaunchLocY = locY;
             Heading = heading;
@@ -60,10 +65,10 @@ namespace Arena.Internal
             State = MissileStates.Flying;
         }
 
-        public void UpdatePosition()
+        public void UpdatePosition(double realStepTime)
         {
             // Update distance
-            CurrentDistance += (MissileSpeed*Arena.StepDelay)/1000.0;
+            CurrentDistance += (MissileSpeed * realStepTime) / 1000.0;
             if (CurrentDistance > Range) // if missile goes too far, get it back :)
                 CurrentDistance = Range;
             // Update location
@@ -71,10 +76,20 @@ namespace Arena.Internal
             Common.Helpers.Math.ComputePoint(LaunchLocX, LaunchLocY, CurrentDistance, Heading, out newLocX, out newLocY);
             LocX = newLocX;
             LocY = newLocY;
+
+            //System.Diagnostics.Debug.WriteLine("Missile {0} location updated. CurrentDistance {1} LaunchX {2} LaunchY {3} LocX {4} LocY {5} Heading {6}", Id, CurrentDistance, LaunchLocX, LaunchLocY, LocX, LocY, Heading);
         }
 
         public void TargetReached()
         {
+            // Check speed
+            double elapsed = Tick.ElapsedMilliseconds(_launchTick);
+            double diffX = LocX - LaunchLocX;
+            double diffY = LocY - LaunchLocY;
+            double distance = System.Math.Sqrt(diffX*diffX + diffY*diffY);
+            double speed = distance/elapsed*1000.0; // in m/s
+            System.Diagnostics.Debug.WriteLine("Missile {0} target reached. Speed {1} Distance {2} Range {3}", Id, speed, distance, Range);
+
             State = MissileStates.Exploding;
         }
 

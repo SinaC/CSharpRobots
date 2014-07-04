@@ -2,6 +2,9 @@
 {
     public interface IReadonlyMissile
     {
+        // Id
+        int Id { get; }
+
         // Robot shooting the missile
         IReadonlyRobot Robot { get; }
 
