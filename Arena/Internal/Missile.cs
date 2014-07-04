@@ -6,7 +6,7 @@ namespace Arena.Internal
     {
         public static readonly int MissileSpeed = 300; // in m/s
 
-        private Tick _launchTick;
+        private readonly Tick _launchTick;
 
         // When a missile has exploded, it stays in state Explosed during x milliseconds
         private Tick _explosionTick;

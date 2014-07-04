@@ -4,9 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using Common.Clock;
-using Timer = System.Timers.Timer;
 
 // TODO: check acceleration and slowing down
 
@@ -72,7 +70,7 @@ namespace Arena.Internal
             };
 
         private readonly ManualResetEvent _stopEvent;
-        private readonly Task _mainTask;
+        private Task _mainTask;
         private readonly List<Robot> _robots;
         private readonly List<Missile> _missiles;
         private int _missileId;
@@ -89,7 +87,6 @@ namespace Arena.Internal
 
             // Initialize stop event and task
             _stopEvent = new ManualResetEvent(false);
-            _mainTask = new Task(MainLoop);
 
             //
             _robots = new List<Robot>();
@@ -170,15 +167,18 @@ namespace Arena.Internal
 
                     Debug.WriteLine("Test Robot Type {0} created at location {1},{2}", robotType, robot.LocX, robot.LocY);
 
-                    // Start robot
+                    State = ArenaStates.Running;
+
+                    // 
                     MatchStart = Tick.Now;
-                    robot.Start(MatchStart);
 
                     // Start task and reset stop event
                     _stopEvent.Reset();
+                    _mainTask = new Task(MainLoop);
                     _mainTask.Start();
 
-                    State = ArenaStates.Running;
+                    // Start robot
+                    robot.Start(MatchStart);
                 }
             }
             catch (Exception ex)
@@ -309,12 +309,15 @@ namespace Arena.Internal
                     //
                     State = ArenaStates.Running;
 
+                    //
+                    MatchStart = Tick.Now;
+
                     // Start task and reset stop event
                     _stopEvent.Reset();
+                    _mainTask = new Task(MainLoop);
                     _mainTask.Start();
 
                     // Start robots
-                    MatchStart = Tick.Now;
                     foreach (Robot robot in _robots)
                         robot.Start(MatchStart);
                 }

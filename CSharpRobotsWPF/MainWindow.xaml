@@ -1,0 +1,57 @@
+﻿<Window x:Class="CSharpRobotsWPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        SnapsToDevicePixels="True"
+        Title="MainWindow" Height="800" Width="1024">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="756"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Width="756" Height="756" BorderBrush="Black" BorderThickness="3">
+            <Canvas x:Name="BattlefieldCanvas" Width="750" Height="750">
+            </Canvas>
+        </Border>
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            
+            <Button Grid.Row="0" x:Name="StartButton" Width="120" Click="StartButton_Click" HorizontalAlignment="Left" Margin="2">
+                <TextBlock Text="Start"/>
+            </Button>
+            
+            <ItemsControl Grid.Row="1" x:Name="RobotInformationsList" ItemsSource="{Binding}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Vertical">
+                            <TextBlock Foreground="{Binding Color}">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}Id{0} Team{1} Dmg {2} | {3}">
+                                        <Binding Path="Id"/>
+                                        <Binding Path="Team"/>
+                                        <Binding Path="Damage"/>
+                                        <Binding Path="State"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                            <TextBlock Foreground="{Binding Color}">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0},{1} H{2} S{3}">
+                                        <Binding Path="LocX"/>
+                                        <Binding Path="LocY"/>
+                                        <Binding Path="Heading"/>
+                                        <Binding Path="Speed"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Grid.Row="2" x:Name="StatusText" VerticalAlignment="Bottom"/>
+        </Grid>
+    </Grid>
+</Window>

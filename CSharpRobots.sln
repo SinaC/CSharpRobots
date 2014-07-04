@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpRobotsConsole", "CSharpRobotsConsole\CSharpRobotsConsole.csproj", "{AA79C7C2-9BC1-4202-A6EE-8F74693B989D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpRobotsWPF", "CSharpRobotsWPF\CSharpRobotsWPF.csproj", "{32779DA8-7510-4E84-AD0D-1B72EFFE2A04}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +45,10 @@ Global
 		{AA79C7C2-9BC1-4202-A6EE-8F74693B989D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AA79C7C2-9BC1-4202-A6EE-8F74693B989D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AA79C7C2-9BC1-4202-A6EE-8F74693B989D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{32779DA8-7510-4E84-AD0D-1B72EFFE2A04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32779DA8-7510-4E84-AD0D-1B72EFFE2A04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32779DA8-7510-4E84-AD0D-1B72EFFE2A04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32779DA8-7510-4E84-AD0D-1B72EFFE2A04}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

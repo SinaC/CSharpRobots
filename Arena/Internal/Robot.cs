@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Common.Clock;
 using SDK;
 
+// TODO: known bug: acceleration is handled poorly: solution use double for speed instead of int and modify UpdateSpeed
+
 namespace Arena.Internal
 {
     internal class Robot : ISDKRobot, IReadonlyRobot
