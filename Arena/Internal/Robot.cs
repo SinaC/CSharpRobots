@@ -4,7 +4,8 @@ using System.Threading.Tasks;
 using Common.Clock;
 using SDK;
 
-// TODO: known bug: acceleration is handled poorly: solution use double for speed instead of int and modify UpdateSpeed
+// TODO: 
+// Handle speed/acceleration in a different way, use m/s instead of %age of MaxSpeed   Speed then return a percentage based on computed speed
 
 namespace Arena.Internal
 {
@@ -15,7 +16,7 @@ namespace Arena.Internal
         public static readonly int MaxDamage = 100;
         public static readonly int MaxResolution = 20; // in degrees
         public static readonly int MaxCannonRange = 700; // in meters
-        public static readonly int MaxAcceleration = 5; // acceleration factor
+        public static readonly int MaxAcceleration = 5; // acceleration factor in m/s
         public static readonly int MaxTurnSpeed = 50; // maximum speed for direction change
 
         private CancellationTokenSource _cancellationTokenSource;
@@ -29,7 +30,7 @@ namespace Arena.Internal
         private int _desiredHeading;
         private int _desiredSpeed;
         //
-        private double _acceleration; // Linear acceleration in m/s
+        private double _acceleration; // Linear acceleration in percentage of maximum speed (represent current speed while accelerating or slowing)
         // Following values are needed to avoid precision problem while computing new location
         private double _originX; // X-component before changing heading
         private double _originY; // Y-component before changing heading
@@ -156,7 +157,7 @@ namespace Arena.Internal
                 {
                     System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowing. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
 
-                    _acceleration -= MaxAcceleration;
+                    _acceleration -= ((MaxAcceleration*realStepTime)/1000.0)*(100.0/MaxSpeed);
                     if (_acceleration < _desiredSpeed)
                     {
                         Speed = _desiredSpeed;
@@ -171,7 +172,7 @@ namespace Arena.Internal
                 {
                     System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerating. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
 
-                    _acceleration += MaxAcceleration;
+                    _acceleration += ((MaxAcceleration*realStepTime)/1000.0)*(100.0/MaxSpeed);
                     if (_acceleration > _desiredSpeed)
                     {
                         Speed = _desiredSpeed;
