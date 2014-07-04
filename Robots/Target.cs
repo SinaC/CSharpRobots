@@ -7,6 +7,7 @@ namespace Robots
     {
         public override void Main()
         {
+            System.Diagnostics.Debug.WriteLine("Target: my position {0} {1}", SDK.LocX, SDK.LocY);
             while (true)
                 ;
         }

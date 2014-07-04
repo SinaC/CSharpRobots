@@ -155,7 +155,7 @@ namespace Arena.Internal
             {
                 if (Speed > _desiredSpeed) // Slowing
                 {
-                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowing. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowing. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
 
                     _acceleration -= ((MaxAcceleration*realStepTime)/1000.0)*(100.0/MaxSpeed);
                     if (_acceleration < _desiredSpeed)
@@ -166,11 +166,11 @@ namespace Arena.Internal
                     else
                         Speed = (int)_acceleration;
 
-                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowed. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowed. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
                 }
                 else // Accelerating
                 {
-                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerating. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerating. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
 
                     _acceleration += ((MaxAcceleration*realStepTime)/1000.0)*(100.0/MaxSpeed);
                     if (_acceleration > _desiredSpeed)
@@ -181,7 +181,7 @@ namespace Arena.Internal
                     else
                         Speed = (int)_acceleration;
 
-                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerated. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerated. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
                 }
             }
         }
@@ -191,7 +191,7 @@ namespace Arena.Internal
             // Update heading, allow change below a certain speed
             if (Heading != _desiredHeading)
             {
-                System.Diagnostics.Debug.WriteLine("Robot {0} | {1} updating heading. Heading {2} Desired Heading {3} RawLocX {4} RawLocY {5} Speed {6}", Id, Team, Heading, _desiredHeading, RawLocX, RawLocY, Speed);
+                //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} updating heading. Heading {2} Desired Heading {3} RawLocX {4} RawLocY {5} Speed {6}", Id, Team, Heading, _desiredHeading, RawLocX, RawLocY, Speed);
 
                 if (Speed <= MaxTurnSpeed)
                 {
@@ -200,11 +200,11 @@ namespace Arena.Internal
                     _originX = RawLocX;
                     _originY = RawLocY;
 
-                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} heading updated. Heading {2} Desired Heading {3} OriginX {4} OriginY {5} Speed {6}", Id, Team, Heading, _desiredHeading, _originX, _originY, Speed);
+                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} heading updated. Heading {2} Desired Heading {3} OriginX {4} OriginY {5} Speed {6}", Id, Team, Heading, _desiredHeading, _originX, _originY, Speed);
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine("Robot {0} | {1} moving too fast, cannot update Heading", Id, Team);
+                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} moving too fast, cannot update Heading", Id, Team);
                     _desiredSpeed = 0;
                 }
             }

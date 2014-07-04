@@ -42,6 +42,7 @@
     <Compile Include="Sniper.cs" />
     <Compile Include="Surveyor.cs" />
     <Compile Include="Target.cs" />
+    <Compile Include="TraceEnemy.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SDK\SDK.csproj">

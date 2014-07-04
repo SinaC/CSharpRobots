@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Robots
+﻿namespace Robots
 {
     public class Follower : SDK.Robot
     {
@@ -30,7 +24,7 @@ namespace Robots
                 if (r > 0)
                 {
                     range = r;
-                    angle = step + resolution/2;
+                    angle = step;
                     return true;
                 }
             }

@@ -4,6 +4,11 @@
     {
         public override void Main()
         {
+            MeasureSpeedAndAcceleration();
+        }
+
+        private void MeasureSpeedAndAcceleration()
+        {
             double initialTime = SDK.Time;
             int initX = SDK.LocX;
             int initY = SDK.LocY;
@@ -41,8 +46,7 @@
                     int diffSpeed = currentSpeed - previousSpeed;
                     double acceleration = diffSpeed / diffLastTime;
 
-                    System.Diagnostics.Debug.WriteLine("Instant speed X:{0:0.00} Y:{1:0.00} - Time {2:0.00}  diff X:{3:0.00} Y:{4:0.00}  Dmg:{5}", actualSpeedX, actualSpeedY, diffTime, diffX, diffY, SDK.Damage);
-                    System.Diagnostics.Debug.WriteLine("Acceleration {0:0.0000}", acceleration);
+                    System.Diagnostics.Debug.WriteLine("TICK:{0:0.00} | Loc:{1},{2} | Instant speed X:{3:0.00} Y:{4:0.00} - Elapsed {5:0.00}  diff X:{6:0.00} Y:{7:0.00}  Dmg:{8} acceleration:{9:0.00}", SDK.Time, currentX, currentY, actualSpeedX, actualSpeedY, diffTime, diffX, diffY, SDK.Damage, acceleration);
 
                     lastTime = currentTime;
                     lastX = currentX;

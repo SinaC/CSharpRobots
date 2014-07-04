@@ -9,7 +9,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <Border Grid.Column="0" Width="756" Height="756" BorderBrush="Black" BorderThickness="3">
-            <Canvas x:Name="BattlefieldCanvas" Width="750" Height="750">
+            <Canvas x:Name="BattlefieldCanvas" Width="750" Height="750" Background="LightGray">
             </Canvas>
         </Border>
         <Grid Grid.Column="1">

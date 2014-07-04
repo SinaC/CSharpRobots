@@ -254,8 +254,8 @@ namespace Arena.Internal
                     }
                 }
             }
-            if (target != null)
-                Debug.WriteLine("Robot {0} | {1} found Robot {2} | {3}", robot.Id, robot.Team, target.Id, target.Team);
+            //if (target != null)
+            //    Debug.WriteLine("Robot {0} | {1} found Robot {2} | {3}", robot.Id, robot.Team, target.Id, target.Team);
             //else
             //    Debug.WriteLine("Robot {0} | {1} failed to find someone else", robot.Id, robot.Team);
             return target != null ? (int)nearest : 0;
@@ -362,7 +362,7 @@ namespace Arena.Internal
                 int sleepTime = (int)(StepDelay - elapsed);
                 if (sleepTime < 0)
                     sleepTime = 1;
-                Debug.WriteLine("Elapsed {0:0.0000} -> Sleep {1}", elapsed, sleepTime);
+                //Debug.WriteLine("Elapsed {0:0.0000} -> Sleep {1}", elapsed, sleepTime);
                 bool stopAsked = _stopEvent.WaitOne(sleepTime);
                 if (stopAsked)
                 {
@@ -383,7 +383,7 @@ namespace Arena.Internal
                 double realStepTime = _lastStepTick == null ? StepDelay : Tick.TotalMilliseconds(now, _lastStepTick);
                 _lastStepTick = now;
 
-                Debug.WriteLine("STEP: {0} {1:0.0000}  {2:0.00}", _stepCount, elapsed, realStepTime);
+                //Debug.WriteLine("STEP: {0} {1:0.0000}  {2:0.00}", _stepCount, elapsed, realStepTime);
                 _stepCount++;
 
                 // Update robots
