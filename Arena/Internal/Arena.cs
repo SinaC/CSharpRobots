@@ -222,7 +222,7 @@ namespace Arena.Internal
 
         public int Cannon(Robot robot, Tick launchTick, int degrees, int range)
         {
-            Debug.WriteLine("Launching missile from Robot {0} | {1} to {2} {3}", robot.Id, robot.Team, degrees, range);
+            Debug.WriteLine("Launching missile from Robot {0}[{1}] to {2} {3}", robot.Name, robot.Id, degrees, range);
             lock (_missiles)
             {
                 Missile missile = new Missile(robot, _missileId, robot.RawLocX, robot.RawLocY, degrees, range);
@@ -256,9 +256,9 @@ namespace Arena.Internal
                 }
             }
             //if (target != null)
-            //    Debug.WriteLine("Robot {0} | {1} found Robot {2} | {3}", robot.Id, robot.Team, target.Id, target.Team);
+            //    Debug.WriteLine("Robot {0}[{1}] found Robot {2}[{3}]", robot.Name, robot.Id, target.Id, target.Team);
             //else
-            //    Debug.WriteLine("Robot {0} | {1} failed to find someone else", robot.Id, robot.Team);
+            //    Debug.WriteLine("Robot {0}[{1}] failed to find someone else", robot.Name, robot.Id);
             return target != null ? (int)nearest : 0;
         }
 
@@ -304,7 +304,7 @@ namespace Arena.Internal
                             robot.Initialize(userRobot, this, i, t, x, y);
                             _robots.Add(robot);
 
-                            Debug.WriteLine("Robot {0} | {1} Type {2} created at location {3},{4}", i, t, teamType[t], x, y);
+                            Debug.WriteLine("Robot {0} | {1} | {2} Type {3} created at location {4},{5}", i, t, robot.Name, teamType[t], x, y);
                         }
 
                     //
@@ -407,7 +407,7 @@ namespace Arena.Internal
                             double diffY = Math.Abs(robot.RawLocY - other.RawLocY);
                             if (diffX < CollisionDistance && diffY < CollisionDistance) // Collision
                             {
-                                Debug.WriteLine("Robot {0} | {1} collides Robot {2} | {3}", robot.Id, robot.Team, other.Id, other.Team);
+                                Debug.WriteLine("Robot {0}[{1}] collides Robot {2}[{3}]", robot.Name, robot.Id, other.Name, other.Id);
                                 // Damage moving robot and stop it
                                 robot.Collision(CollisionDamage);
                                 // Damage colliding robot
@@ -417,22 +417,22 @@ namespace Arena.Internal
                         // With walls
                         if (robot.RawLocX < 0)
                         {
-                            Debug.WriteLine("Robot {0} | {1} collides left wall", robot.Id, robot.Team);
+                            Debug.WriteLine("Robot {0}[{1}] collides left wall", robot.Name, robot.Id);
                             robot.CollisionWall(CollisionDamage, 0, robot.RawLocY);
                         }
                         else if (robot.RawLocX >= ArenaSize)
                         {
-                            Debug.WriteLine("Robot {0} | {1} collides right wall", robot.Id, robot.Team);
+                            Debug.WriteLine("Robot {0}[{1}] collides right wall", robot.Name, robot.Id);
                             robot.CollisionWall(CollisionDamage, ArenaSize - 1, robot.RawLocY);
                         }
                         if (robot.RawLocY < 0)
                         {
-                            Debug.WriteLine("Robot {0} | {1} collides top wall", robot.Id, robot.Team);
+                            Debug.WriteLine("Robot {0}[{1}] collides top wall", robot.Name, robot.Id);
                             robot.CollisionWall(CollisionDamage, robot.RawLocX, 0);
                         }
                         else if (robot.RawLocY >= ArenaSize)
                         {
-                            Debug.WriteLine("Robot {0} | {1} collides bottom wall", robot.Id, robot.Team);
+                            Debug.WriteLine("Robot {0}[{1}] collides bottom wall", robot.Name, robot.Id);
                             robot.CollisionWall(CollisionDamage, robot.RawLocX, ArenaSize - 1);
                         }
                     }
@@ -450,29 +450,29 @@ namespace Arena.Internal
                             // Check for missile hitting walls
                             if (missile.LocX < 0)
                             {
-                                Debug.WriteLine("Missile from Robot {0} | {1} collides left wall", missile.Robot.Id, missile.Robot.Team);
+                                Debug.WriteLine("Missile from Robot {0}[{1}] collides left wall", missile.Robot.Name, missile.Robot.Id);
                                 missile.CollisionWall(0, missile.LocY);
                             }
                             if (missile.LocX >= ArenaSize)
                             {
-                                Debug.WriteLine("Missile from Robot {0} | {1} collides rigth wall", missile.Robot.Id, missile.Robot.Team);
+                                Debug.WriteLine("Missile from Robot {0}[{1}] collides rigth wall", missile.Robot.Name, missile.Robot.Id);
                                 missile.CollisionWall(ArenaSize - 1, missile.LocY);
                             }
                             if (missile.LocY < 0)
                             {
-                                Debug.WriteLine("Missile from Robot {0} | {1} collides top wall", missile.Robot.Id, missile.Robot.Team);
+                                Debug.WriteLine("Missile from Robot {0}[{1}] collides top wall", missile.Robot.Name, missile.Robot.Id);
                                 missile.CollisionWall(missile.LocX, 0);
                             }
                             if (missile.LocY >= ArenaSize)
                             {
-                                Debug.WriteLine("Missile from Robot {0} | {1} collides bottom wall", missile.Robot.Id, missile.Robot.Team);
+                                Debug.WriteLine("Missile from Robot {0}[{1}] collides bottom wall", missile.Robot.Name, missile.Robot.Id);
                                 missile.CollisionWall(missile.LocX, ArenaSize - 1);
                             }
 
                             // Check for missile reaching target range
                             if (missile.CurrentDistance >= missile.Range)
                             {
-                                Debug.WriteLine("Missile from Robot {0} | {1} reached its target", missile.Robot.Id, missile.Robot.Team);
+                                Debug.WriteLine("Missile from Robot {0}[{1}] reached its target", missile.Robot.Name, missile.Robot.Id);
                                 missile.TargetReached();
                             }
 
@@ -485,7 +485,7 @@ namespace Arena.Internal
                                     foreach (DamageByRange damageByRange in _damageByRanges)
                                         if (distance < damageByRange.Range)
                                         {
-                                            Debug.WriteLine("Missile from Robot {0} | {1} damages Robot {2} | {3} dealing {4} damage, distance {5:0.000}", missile.Robot.Id, missile.Robot.Team, robot.Id, robot.Team, damageByRange.Damage, distance);
+                                            Debug.WriteLine("Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000}", missile.Robot.Name, missile.Robot.Id, robot.Name, robot.Id, damageByRange.Damage, distance);
                                             robot.TakeDamage(damageByRange.Damage);
                                             break; // missile in this range, no need to check other ranges
                                         }

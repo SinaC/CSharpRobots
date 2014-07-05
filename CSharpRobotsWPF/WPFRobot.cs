@@ -51,6 +51,21 @@ namespace CSharpRobotsWPF
             }
         }
 
+        private string _name;
+
+        public string Name
+        {
+            get { return _name; }
+            set
+            {
+                if (_name != value)
+                {
+                    _name = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         private int _damage;
         public int Damage
         {
@@ -121,7 +136,7 @@ namespace CSharpRobotsWPF
             }
         }
 
-        public string _state;
+        private string _state;
         public string State
         {
             get { return _state; }
@@ -130,6 +145,20 @@ namespace CSharpRobotsWPF
                 if (_state != value)
                 {
                     _state = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private int _cannonCount;
+        public int CannonCount
+        {
+            get { return _cannonCount; }
+            set
+            {
+                if (_cannonCount != value)
+                {
+                    _cannonCount = value;
                     OnPropertyChanged();
                 }
             }

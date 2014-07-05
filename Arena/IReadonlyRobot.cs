@@ -4,6 +4,7 @@
     {
         int Team { get; }
         int Id { get; }
+        string Name { get; }
 
         RobotStates State { get; }
 
@@ -15,5 +16,7 @@
         int Speed { get; }
 
         int Damage { get; }
+
+        int CannonCount { get; }
     }
 }

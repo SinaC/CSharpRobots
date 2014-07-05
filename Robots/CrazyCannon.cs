@@ -2,6 +2,8 @@
 {
     public class CrazyCannon : SDK.Robot
     {
+        public override string Name { get { return "CrazyCannon"; } }
+
         public override void Main()
         {
             while(true)

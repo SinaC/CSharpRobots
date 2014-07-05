@@ -4,6 +4,8 @@ namespace Robots
 {
     public class Counter : Robot
     {
+        public override string Name { get { return "Counter"; } }
+
         public override void Main()
         {
             const int res = 1;

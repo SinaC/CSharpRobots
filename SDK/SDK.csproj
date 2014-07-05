@@ -37,7 +37,6 @@
     <Compile Include="ISDKRobot.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Robot.cs" />
-    <Compile Include="RobotByStep.cs" />
     <Compile Include="Vector.cs" />
   </ItemGroup>
   <ItemGroup>

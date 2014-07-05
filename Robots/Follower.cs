@@ -2,6 +2,8 @@
 {
     public class Follower : SDK.Robot
     {
+        public override string Name { get { return "Follower"; } }
+
         public override void Main()
         {
             while (true)

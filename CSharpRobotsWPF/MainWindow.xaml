@@ -29,9 +29,9 @@
                         <StackPanel Orientation="Vertical">
                             <TextBlock Foreground="{Binding Color}">
                                 <TextBlock.Text>
-                                    <MultiBinding StringFormat="{}Id{0} Team{1} Dmg {2} | {3}">
+                                    <MultiBinding StringFormat="{}{0}[{1}] Dmg {2} | {3}">
+                                        <Binding Path="Name"/>
                                         <Binding Path="Id"/>
-                                        <Binding Path="Team"/>
                                         <Binding Path="Damage"/>
                                         <Binding Path="State"/>
                                     </MultiBinding>
@@ -39,11 +39,12 @@
                             </TextBlock>
                             <TextBlock Foreground="{Binding Color}">
                                 <TextBlock.Text>
-                                    <MultiBinding StringFormat="{}{0},{1} H{2} S{3}">
+                                    <MultiBinding StringFormat="{}{0},{1} H{2} S{3} | {4}">
                                         <Binding Path="LocX"/>
                                         <Binding Path="LocY"/>
                                         <Binding Path="Heading"/>
                                         <Binding Path="Speed"/>
+                                        <Binding Path="CannonCount"/>
                                     </MultiBinding>
                                 </TextBlock.Text>
                             </TextBlock>

@@ -1,7 +1,10 @@
 ﻿namespace Robots
 {
+    // Measurement robot
     public class Surveyor : SDK.Robot
     {
+        public override string Name { get { return "Surveyor"; } }
+
         public override void Main()
         {
             MeasureSpeedAndAcceleration();

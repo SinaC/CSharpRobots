@@ -5,6 +5,8 @@ namespace Robots
     // Rook scans the battlefield like a rook, i.e., only 0,90,180,270; move horizontally only, but looks horz and vertically
     public class Rook : Robot
     {
+        public override string Name { get { return "Rook"; } }
+
         int _course;
         int _boundary;
         int _damage;

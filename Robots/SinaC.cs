@@ -6,6 +6,9 @@ namespace Robots
 {
     public class SinaC : Robot
     {
+        public override string Name { get { return "SinaC"; } }
+
+        double _previousSuccessfulShootTime;
         double _previousTime;
         int _previousAngle;
         int _previousRange;
@@ -20,17 +23,27 @@ namespace Robots
             
             DriveRandomly();
             FireOnTarget();
+            _previousSuccessfulShootTime = SDK.Time;
 
             while (true)
             {
                 double currentTime = SDK.Time;
 
                 double elapsedTime = currentTime - _previousTime;
-                if (elapsedTime > 1)
+                double elapsedShootingTime = currentTime - _previousSuccessfulShootTime;
+
+                if (elapsedShootingTime > 1) // 1 second since last successfull shoot
                 {
                     // Fire on target
-                    FireOnTargetInterpolated(elapsedTime);
+                    bool success = FireOnTargetInterpolated(elapsedShootingTime);
 
+                    //
+                    if (success)
+                        _previousSuccessfulShootTime = SDK.Time;
+                }
+
+                if (elapsedTime > 1) // 1 second since last move
+                {
                     // Change direction
                     DriveRandomly();
 
@@ -51,43 +64,48 @@ namespace Robots
             }
         }
 
-        private void FireOnTargetInterpolated(double elapsedTime)
+        private bool FireOnTargetInterpolated(double elapsedTime)
         {
+            bool success = false;
             // Fire on target
-            int currentAngle, currentRange;
-            bool targetFound = FindTarget(1, out currentAngle, out currentRange);
+            int targetAngle, targetRange;
+            bool targetFound = FindTarget(1, out targetAngle, out targetRange);
             if (targetFound)
             {
                 double currentEnemyX, currentEnemyY;
-                ComputePoint(SDK.LocX, SDK.LocY, currentRange, currentAngle, out currentEnemyX, out currentEnemyY);
+                ComputePoint(SDK.LocX, SDK.LocY, targetRange, targetAngle, out currentEnemyX, out currentEnemyY);
 
                 double currentSpeedX, currentSpeedY;
                 ComputeSpeed(elapsedTime, _previousEnemyX, _previousEnemyY, currentEnemyX, currentEnemyY, out currentSpeedX, out currentSpeedY);
 
-                System.Diagnostics.Debug.WriteLine("TICK:{0:0.00} | Enemy position: {1:0.0000}, {2:0.0000} Speed : {3:0.0000}, {4:0.0000} | range {5} angle {6}", SDK.Time, currentEnemyX, currentEnemyY, currentSpeedX, currentSpeedY, currentRange, currentAngle);
+                //System.Diagnostics.Debug.WriteLine("TICK:{0:0.00} | Enemy position: {1:0.0000}, {2:0.0000} Speed : {3:0.0000}, {4:0.0000} | range {5} angle {6}", SDK.Time, currentEnemyX, currentEnemyY, currentSpeedX, currentSpeedY, currentRange, currentAngle);
 
                 if (_previousRange != 0 && _previousAngle != 0) // Only fire when we have valid information
                 {
                     int cannonAngle, cannonRange;
                     ComputeCannonInfo(SDK.LocX, SDK.LocY, currentEnemyX, currentEnemyY, currentSpeedX, currentSpeedY, out cannonAngle, out cannonRange);
 
-                    if (cannonRange < 750) // Don't fire if too far
-                        SDK.Cannon(cannonAngle, cannonRange);
+                    if (cannonRange > 40 && cannonRange < 750) // Don't fire if too far
+                    {
+                        success = SDK.Cannon(cannonAngle, cannonRange) != 0;
+                    }
                 }
                 else // If no information on speed, fire at current location
                 {
-                    if (currentRange < 750) // Don't fire if too far
-                        SDK.Cannon(currentAngle, currentRange);
+                    if (targetRange > 40 && targetRange < 750) // Don't fire if too far or too near
+                    {
+                        success = SDK.Cannon(targetAngle, targetRange) != 0;
+                    }
                 }
 
-                _previousAngle = currentAngle;
-                _previousRange = currentRange;
+                _previousAngle = targetAngle;
+                _previousRange = targetRange;
                 _previousEnemyX = currentEnemyX;
                 _previousEnemyY = currentEnemyY;
                 _previousSpeedX = currentSpeedX;
                 _previousSpeedY = currentSpeedY;
-
             }
+            return success;
         }
 
         private void DriveRandomly()
@@ -138,7 +156,7 @@ namespace Robots
             // t = ( sqrt(3002 (Dx2 + Dy2) - (DxVy - DyVx)2) + (DxVx + DyVy) ) / (3002 - (Vx2 + Vy2) )
             double dX = enemyX - robotX;
             double dY = enemyY - robotY;
-            double t = SDK.Sqrt(300*300*(dX*dX + dY*dY) - (dX*speedY - dY*speedX)*(dX*speedY - dY*speedX))/(300*300 - (speedX*speedX + speedY*speedY));
+            double t = SDK.Sqrt(300*300*(dX*dX + dY*dY) - (dX*speedY - dY*speedX)*(dX*speedY - dY*speedX) + 0.5)/(300*300 - (speedX*speedX + speedY*speedY));
             double pX = enemyX + speedX*t;
             double pY = enemyY + speedY*t;
 
@@ -149,7 +167,7 @@ namespace Robots
             angle = (int) SDK.Rad2Deg(v.A);
             range = (int) v.R;
 
-            System.Diagnostics.Debug.WriteLine("t: {0:0.0000} (global: {1:0.0000} new enemy position: {2:0.0000}, {3:0.0000}  angle {4:0} range {5:0}", t, SDK.Time + t, pX, pY, angle, range);
+            //System.Diagnostics.Debug.WriteLine("t: {0:0.0000} (global: {1:0.0000} new enemy position: {2:0.0000}, {3:0.0000}  angle {4:0} range {5:0}", t, SDK.Time + t, pX, pY, angle, range);
         }
     }
 }

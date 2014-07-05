@@ -297,7 +297,11 @@ namespace Arena.Internal
 
         public int Team { get; private set; }
 
+        public string Name { get { return _userRobot.Name; } }
+
         public int Heading { get; private set; }
+
+        public int CannonCount { get; private set; }
 
         #endregion
 
@@ -307,8 +311,8 @@ namespace Arena.Internal
         {
             get
             {
-                Thread.Yield(); // Give time to others
-                return Tick.ElapsedMilliseconds(_matchStart) / 1000.0;
+                //Thread.Yield(); // Give time to others
+                return Tick.ElapsedSeconds(_matchStart);
             }
         }
 
@@ -324,11 +328,14 @@ namespace Arena.Internal
 
             degrees = FixDegrees(degrees);
             range = FixCannonRange(range);
-            if (LastMissileLaunchTick != null && Tick.ElapsedSeconds(LastMissileLaunchTick) < 1) // reload
+            double elapsed = LastMissileLaunchTick == null ? double.MaxValue : Tick.ElapsedSeconds(LastMissileLaunchTick);
+            if (elapsed < 1) // reload
             {
                 Thread.Yield(); // Give time to others
                 return 0;
             }
+            System.Diagnostics.Debug.WriteLine("Robot {0}[{1}] shooting interval {2}", Name, Id, elapsed);
+            CannonCount++;
             LastMissileLaunchTick = Tick.Now;
             int result = _arena.Cannon(this, LastMissileLaunchTick, degrees, range);
             return result;

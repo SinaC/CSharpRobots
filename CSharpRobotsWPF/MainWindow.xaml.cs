@@ -46,93 +46,6 @@ namespace CSharpRobotsWPF
             _stopEvent = new ManualResetEvent(false);
         }
 
-        private Brush CreateExplosionBrush()
-        {
-            // 0 -> 5: red
-            // 6 -> 20: orange
-            // 21 -> 40: yellow
-
-            RadialGradientBrush brush = new RadialGradientBrush
-            {
-                GradientOrigin = new Point(0.5, 0.5),
-                Center = new Point(0.5, 0.5)
-            };
-
-            GradientStop red = new GradientStop
-            {
-                Color = Colors.Red,
-                Offset = 0.0
-            };
-            brush.GradientStops.Add(red);
-
-            GradientStop orange = new GradientStop
-            {
-                Color = Colors.Orange,
-                Offset = 0.125
-            };
-            brush.GradientStops.Add(orange);
-
-            GradientStop yellow = new GradientStop
-            {
-                Color = Colors.Yellow,
-                Offset = 0.50
-            };
-            brush.GradientStops.Add(yellow);
-
-            return brush;
-        }
-
-        private FrameworkElement CreateExplosionUIElement()
-        {
-            //Ellipse ellipse = new Ellipse
-            //{
-            //    Width = 80*BattlefieldCanvas.Width/1000.0,
-            //    Height = 80*BattlefieldCanvas.Height/1000.0,
-            //    Fill = Explosion5Brush,
-            //    Visibility = Visibility.Hidden
-            //};
-            //return ellipse;
-            double width = 80*BattlefieldCanvas.Width/1000.0;
-            double height = 80*BattlefieldCanvas.Height/1000.0;
-            Grid grid = new Grid
-            {
-                Width = width,
-                Height = height,
-                Visibility = Visibility.Hidden
-            };
-            double width5 = 10 * BattlefieldCanvas.Width / 1000.0;
-            double height5 = 10 * BattlefieldCanvas.Width / 1000.0;
-            Ellipse ellipse5 = new Ellipse
-            {
-                Width = width5,
-                Height = height5,
-                Fill = Explosion5Brush,
-                Visibility = Visibility.Visible,
-            };
-            double width20 = 40 * BattlefieldCanvas.Width / 1000.0;
-            double height20 = 40 * BattlefieldCanvas.Width / 1000.0;
-            Ellipse ellipse20 = new Ellipse
-            {
-                Width = width20,
-                Height = height20,
-                Fill = Explosion20Brush,
-                Visibility = Visibility.Visible,
-            };
-            double width40 = 80 * BattlefieldCanvas.Width / 1000.0;
-            double height40 = 80 * BattlefieldCanvas.Width / 1000.0;
-            Ellipse ellipse40 = new Ellipse
-            {
-                Width = width40,
-                Height = height40,
-                Fill = Explosion40Brush,
-                Visibility = Visibility.Visible,
-            };
-            grid.Children.Add(ellipse40);
-            grid.Children.Add(ellipse20);
-            grid.Children.Add(ellipse5);
-            return grid;
-        }
-
         private void StartButton_Click(object sender, RoutedEventArgs e)
         {
             if (_arena != null && _arena.State == ArenaStates.Running)
@@ -142,7 +55,7 @@ namespace CSharpRobotsWPF
                 //
                 _arena = Factory.CreateArena();
                 //_arena.StartSolo(typeof(CrazyCannon), 500, 500, 0, 0);
-                _arena.StartSingleMatch(typeof (SinaC), typeof (Counter));
+                _arena.StartSingleMatch(typeof (SinaC), typeof (Stinger));
 
                 if (_arena.State == ArenaStates.Error)
                     StatusText.Text = "Error while creating match";
@@ -327,6 +240,7 @@ namespace CSharpRobotsWPF
             wpfRobot.LocY = robot.LocY;
             wpfRobot.Heading = robot.Heading;
             wpfRobot.Speed = robot.Speed;
+            wpfRobot.CannonCount = robot.CannonCount;
 
             UpdateUIPosition(wpfRobot.UIElement, robot.LocX, robot.LocY);
         }
@@ -342,6 +256,7 @@ namespace CSharpRobotsWPF
                 {
                     Id = robot.Id,
                     Team = robot.Team,
+                    Name = robot.Name,
                     Color = TeamBrushes[robot.Team],
                     UIElement = new Rectangle
                         {
@@ -362,6 +277,57 @@ namespace CSharpRobotsWPF
             double posY = locY / (1000.0 / BattlefieldCanvas.Height) - element.Height/2.0;
             Canvas.SetTop(element, posX);
             Canvas.SetLeft(element, posY);
+        }
+
+        private FrameworkElement CreateExplosionUIElement()
+        {
+            //Ellipse ellipse = new Ellipse
+            //{
+            //    Width = 80*BattlefieldCanvas.Width/1000.0,
+            //    Height = 80*BattlefieldCanvas.Height/1000.0,
+            //    Fill = Explosion5Brush,
+            //    Visibility = Visibility.Hidden
+            //};
+            //return ellipse;
+            double width = 80 * BattlefieldCanvas.Width / 1000.0;
+            double height = 80 * BattlefieldCanvas.Height / 1000.0;
+            Grid grid = new Grid
+            {
+                Width = width,
+                Height = height,
+                Visibility = Visibility.Hidden
+            };
+            double width5 = 10 * BattlefieldCanvas.Width / 1000.0;
+            double height5 = 10 * BattlefieldCanvas.Width / 1000.0;
+            Ellipse ellipse5 = new Ellipse
+            {
+                Width = width5,
+                Height = height5,
+                Fill = Explosion5Brush,
+                Visibility = Visibility.Visible,
+            };
+            double width20 = 40 * BattlefieldCanvas.Width / 1000.0;
+            double height20 = 40 * BattlefieldCanvas.Width / 1000.0;
+            Ellipse ellipse20 = new Ellipse
+            {
+                Width = width20,
+                Height = height20,
+                Fill = Explosion20Brush,
+                Visibility = Visibility.Visible,
+            };
+            double width40 = 80 * BattlefieldCanvas.Width / 1000.0;
+            double height40 = 80 * BattlefieldCanvas.Width / 1000.0;
+            Ellipse ellipse40 = new Ellipse
+            {
+                Width = width40,
+                Height = height40,
+                Fill = Explosion40Brush,
+                Visibility = Visibility.Visible,
+            };
+            grid.Children.Add(ellipse40);
+            grid.Children.Add(ellipse20);
+            grid.Children.Add(ellipse5);
+            return grid;
         }
     }
 }

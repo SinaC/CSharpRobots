@@ -4,6 +4,8 @@ namespace Robots
 {
     public class Sniper : Robot
     {
+        public override string Name { get { return "Sniper"; } }
+
         int _corner;
         int _c1X, _c1Y;
         int _c2X, _c2Y;

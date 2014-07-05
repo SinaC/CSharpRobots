@@ -5,6 +5,8 @@ namespace Robots
     // Rabbit runs around the field, SDK.Randomly and never fires; use as a target
     public class Rabbit : Robot
     {
+        public override string Name { get { return "Rabbit"; } }
+
         public override void Main()
         {
             while (true)
