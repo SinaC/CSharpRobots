@@ -5,7 +5,8 @@ using Common.Clock;
 using SDK;
 
 // TODO: 
-// Handle speed/acceleration in a different way, use m/s instead of %age of MaxSpeed   Speed then return a percentage based on computed speed
+// Handle speed/acceleration in a different way, use m/s instead of %age of MaxSpeed   SDK.Speed will return a percentage based on computed speed
+// Thread.Yield(); in every SDK API but not in IReadonlyRobot (2 different versions if exists in both)
 
 namespace Arena.Internal
 {
@@ -25,7 +26,9 @@ namespace Arena.Internal
         private Arena _arena;
         private SDK.Robot _userRobot;
         private Tick _matchStart;
-        
+
+        private int _damage;
+
         // These values are modified by Drive and used to compute acceleration/range/speed/location
         private int _desiredHeading;
         private int _desiredSpeed;
@@ -55,7 +58,7 @@ namespace Arena.Internal
             Team = team;
             RawLocX = locX;
             RawLocY = locY;
-            Damage = 0;
+            _damage = 0;
             Speed = 0;
 
             Heading = 0;
@@ -79,7 +82,7 @@ namespace Arena.Internal
             Team = team;
             RawLocX = locX;
             RawLocY = locY;
-            Damage = 0;
+            _damage = 0;
             Speed = speed;
 
             Heading = heading;
@@ -254,19 +257,37 @@ namespace Arena.Internal
 
         #region IReadonlyRobot + ISDKRobot
 
-        public int Id { get; private set; }
-        
-        public int LocX
+        public int Id { get; private set; } // TODO: yield
+
+        public int LocX // TODO: yield
         {
-            get { return (int)RawLocX; }
+            get
+            {
+                return (int)RawLocX;
+            }
         }
 
-        public int LocY
+        public int LocY // TODO: yield
         {
-            get { return (int)RawLocY; }
+            get
+            {
+                return (int)RawLocY;
+            }
         }
 
-        public int Damage { get; private set; }
+        public int Damage // TODO: yield
+        {
+            get
+            {
+                return _damage;
+            }
+            private set
+            {
+                _damage = value;
+            }
+        }
+
+        public int Speed { get; private set; } // TODO: yield
 
         #endregion
 
@@ -278,51 +299,67 @@ namespace Arena.Internal
 
         public int Heading { get; private set; }
 
-        public int Speed { get; private set; }
-
         #endregion
 
         #region ISDKRobot
 
         public double Time
         {
-            get { return Tick.ElapsedMilliseconds(_matchStart) / 1000.0; }
+            get
+            {
+                Thread.Yield(); // Give time to others
+                return Tick.ElapsedMilliseconds(_matchStart) / 1000.0;
+            }
         }
 
         public int Cannon(int degrees, int range)
         {
+            Thread.Yield(); // Give time to others
             //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Cannon {2} {3}.", Id, Team, degrees, range);
+            if (_damage > 100) // too damaged
+            {
+                Thread.Yield(); // Give time to others
+                return 0;
+            }
 
             degrees = FixDegrees(degrees);
             range = FixCannonRange(range);
-            if (LastMissileLaunchTick != null && Tick.ElapsedSeconds(LastMissileLaunchTick) < 1)
-                return 0; // reload
+            if (LastMissileLaunchTick != null && Tick.ElapsedSeconds(LastMissileLaunchTick) < 1) // reload
+            {
+                Thread.Yield(); // Give time to others
+                return 0;
+            }
             LastMissileLaunchTick = Tick.Now;
             int result = _arena.Cannon(this, LastMissileLaunchTick, degrees, range);
-            Thread.Sleep(1);
             return result;
         }
 
         public void Drive(int degrees, int speed)
         {
+            Thread.Yield(); // Give time to others
             //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Drive {2} {3}.", Id, Team, degrees, speed);
 
             degrees = FixDegrees(degrees);
             speed = FixSpeed(speed);
+
             _desiredHeading = degrees;
             _desiredSpeed = speed;
             _arena.Drive(this, degrees, speed);
-            Thread.Sleep(1);
         }
 
         public int Scan(int degrees, int resolution)
         {
+            Thread.Yield();
             //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Scan {2} {3}.", Id, Team, degrees, resolution);
+            if (_damage > 100) // too damaged
+            {
+                Thread.Yield(); // Give time to others
+                return 0;
+            }
 
             degrees = FixDegrees(degrees);
             resolution = FixResolution(resolution);
             int result = _arena.Scan(this, degrees, resolution);
-            Thread.Sleep(1);
             return result;
         }
 
@@ -453,7 +490,7 @@ namespace Arena.Internal
         private static int FixDegrees(int degrees)
         {
             if (degrees < 0)
-                degrees = -degrees;
+                degrees = 360+degrees;
             if (degrees >= 360)
                 degrees %= 360;
             return degrees;

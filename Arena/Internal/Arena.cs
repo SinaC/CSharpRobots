@@ -6,7 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Common.Clock;
 
-// TODO: check acceleration and slowing down
+// TODO: add match time limit
+// BUG: sometimes robots are not started soon enough -> match is stopped considering a draw
 
 namespace Arena.Internal
 {

@@ -16,7 +16,7 @@ namespace CSharpRobotsConsole
             IReadonlyArena arena = Factory.CreateArena();
             //arena.StartSolo(typeof(Surveyor), 0, 500, 0, 0);
             //arena.StartSingleMatch(typeof(Counter), typeof(Sniper));
-            arena.StartSingleMatch(typeof(TraceEnemy), typeof(Surveyor));
+            arena.StartSingleMatch(typeof(SinaC), typeof(Surveyor));
             //arena.StartTeamMatch(typeof(Follower), typeof(Rabbit), typeof(Counter), typeof(Sniper));
             if (arena.State == ArenaStates.Error)
             {

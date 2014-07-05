@@ -21,12 +21,14 @@ namespace CSharpRobotsWPF
         private static readonly SolidColorBrush[] TeamBrushes = new[]
             {
                 new SolidColorBrush(Colors.Black),
-                new SolidColorBrush(Colors.Yellow),
+                new SolidColorBrush(Colors.Blue),
                 new SolidColorBrush(Colors.Green),
                 new SolidColorBrush(Colors.Magenta)
             };
         private static readonly Brush TargetBrush = new SolidColorBrush(Colors.Black);
-        private static readonly Brush ExplosionBrush = new SolidColorBrush(Colors.Red);
+        private static readonly Brush Explosion5Brush = new SolidColorBrush(Colors.Red);
+        private static readonly Brush Explosion20Brush = new SolidColorBrush(Colors.Orange);
+        private static readonly Brush Explosion40Brush = new SolidColorBrush(Colors.Yellow);
 
         private IReadonlyArena _arena;
         private List<WPFRobot> _wpfRobots;
@@ -44,6 +46,93 @@ namespace CSharpRobotsWPF
             _stopEvent = new ManualResetEvent(false);
         }
 
+        private Brush CreateExplosionBrush()
+        {
+            // 0 -> 5: red
+            // 6 -> 20: orange
+            // 21 -> 40: yellow
+
+            RadialGradientBrush brush = new RadialGradientBrush
+            {
+                GradientOrigin = new Point(0.5, 0.5),
+                Center = new Point(0.5, 0.5)
+            };
+
+            GradientStop red = new GradientStop
+            {
+                Color = Colors.Red,
+                Offset = 0.0
+            };
+            brush.GradientStops.Add(red);
+
+            GradientStop orange = new GradientStop
+            {
+                Color = Colors.Orange,
+                Offset = 0.125
+            };
+            brush.GradientStops.Add(orange);
+
+            GradientStop yellow = new GradientStop
+            {
+                Color = Colors.Yellow,
+                Offset = 0.50
+            };
+            brush.GradientStops.Add(yellow);
+
+            return brush;
+        }
+
+        private FrameworkElement CreateExplosionUIElement()
+        {
+            //Ellipse ellipse = new Ellipse
+            //{
+            //    Width = 80*BattlefieldCanvas.Width/1000.0,
+            //    Height = 80*BattlefieldCanvas.Height/1000.0,
+            //    Fill = Explosion5Brush,
+            //    Visibility = Visibility.Hidden
+            //};
+            //return ellipse;
+            double width = 80*BattlefieldCanvas.Width/1000.0;
+            double height = 80*BattlefieldCanvas.Height/1000.0;
+            Grid grid = new Grid
+            {
+                Width = width,
+                Height = height,
+                Visibility = Visibility.Hidden
+            };
+            double width5 = 10 * BattlefieldCanvas.Width / 1000.0;
+            double height5 = 10 * BattlefieldCanvas.Width / 1000.0;
+            Ellipse ellipse5 = new Ellipse
+            {
+                Width = width5,
+                Height = height5,
+                Fill = Explosion5Brush,
+                Visibility = Visibility.Visible,
+            };
+            double width20 = 40 * BattlefieldCanvas.Width / 1000.0;
+            double height20 = 40 * BattlefieldCanvas.Width / 1000.0;
+            Ellipse ellipse20 = new Ellipse
+            {
+                Width = width20,
+                Height = height20,
+                Fill = Explosion20Brush,
+                Visibility = Visibility.Visible,
+            };
+            double width40 = 80 * BattlefieldCanvas.Width / 1000.0;
+            double height40 = 80 * BattlefieldCanvas.Width / 1000.0;
+            Ellipse ellipse40 = new Ellipse
+            {
+                Width = width40,
+                Height = height40,
+                Fill = Explosion40Brush,
+                Visibility = Visibility.Visible,
+            };
+            grid.Children.Add(ellipse40);
+            grid.Children.Add(ellipse20);
+            grid.Children.Add(ellipse5);
+            return grid;
+        }
+
         private void StartButton_Click(object sender, RoutedEventArgs e)
         {
             if (_arena != null && _arena.State == ArenaStates.Running)
@@ -53,7 +142,7 @@ namespace CSharpRobotsWPF
                 //
                 _arena = Factory.CreateArena();
                 //_arena.StartSolo(typeof(CrazyCannon), 500, 500, 0, 0);
-                _arena.StartSingleMatch(typeof (Counter), typeof (Rabbit));
+                _arena.StartSingleMatch(typeof (SinaC), typeof (Counter));
 
                 if (_arena.State == ArenaStates.Error)
                     StatusText.Text = "Error while creating match";
@@ -96,7 +185,7 @@ namespace CSharpRobotsWPF
                 int sleepTime = (int) (refreshTime - elapsed);
                 if (sleepTime < 0)
                     sleepTime = 1;
-                Debug.WriteLine("WPF: Elapsed {0:0.0000} -> Sleep {1}", elapsed, sleepTime);
+                //Debug.WriteLine("WPF: Elapsed {0:0.0000} -> Sleep {1}", elapsed, sleepTime);
                 bool stopAsked = _stopEvent.WaitOne(sleepTime);
                 if (stopAsked)
                 {
@@ -216,13 +305,7 @@ namespace CSharpRobotsWPF
                             Stroke = TargetBrush,
                             Visibility = Visibility.Hidden
                         },
-                    ExplosionUIElement = new Ellipse
-                        {
-                            Width = 80*BattlefieldCanvas.Width/1000.0,
-                            Height = 80*BattlefieldCanvas.Height/1000.0,
-                            Fill = ExplosionBrush,
-                            Visibility = Visibility.Hidden
-                        }
+                    ExplosionUIElement = CreateExplosionUIElement()
                 };
             BattlefieldCanvas.Children.Add(wpfMissile.FlyingUIElement);
             BattlefieldCanvas.Children.Add(wpfMissile.TargetUIElement);
@@ -264,9 +347,10 @@ namespace CSharpRobotsWPF
                         {
                             Width = 4,
                             Height = 4,
-                            Fill = TeamBrushes[robot.Team]
+                            Fill = TeamBrushes[robot.Team],
                         }
                 };
+            Panel.SetZIndex(wpfRobot.UIElement, 100);
             BattlefieldCanvas.Children.Add(wpfRobot.UIElement);
             UpdateRobot(wpfRobot, robot);
             _wpfRobots.Add(wpfRobot);
