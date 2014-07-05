@@ -85,7 +85,7 @@ namespace CSharpRobotsWPF
             Stopwatch sw = new Stopwatch();
             while (true)
             {
-                if (_arena.State == ArenaStates.Stopped)
+                if (_arena.State == ArenaStates.Stopped || _arena.State == ArenaStates.NoWinner || _arena.State == ArenaStates.Winner || _arena.State == ArenaStates.Error)
                     break;
                 
                 sw.Reset();

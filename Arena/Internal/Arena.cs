@@ -501,21 +501,24 @@ namespace Arena.Internal
                     _missiles.RemoveAll(x => x.State == MissileStates.Deleted);
                 }
 
-                // Check if there is a winning team
-                List<int> teamsWithRobotRunning = _robots.Where(x => x.State == RobotStates.Running).GroupBy(x => x.Team).Select(g => g.Key).ToList();
-                if (teamsWithRobotRunning.Count == 0)
+                if (_robots.All(x => x.State != RobotStates.Created && x.State != RobotStates.Initialized)) // check only if robot has started
                 {
-                    Debug.WriteLine("No robot alive -> Draw");
-                    // Draw
-                    StopMatch(ArenaStates.NoWinner);
-                }
-                else if (teamsWithRobotRunning.Count == 1 && Mode != ArenaModes.Solo)
-                {
-                    // And the winner is
-                    WinningTeam = teamsWithRobotRunning[0];
-                    Debug.WriteLine("And the winner is {0}", WinningTeam);
+                    // Check if there is a winning team
+                    List<int> teamsWithRobotRunning = _robots.Where(x => x.State == RobotStates.Running).GroupBy(x => x.Team).Select(g => g.Key).ToList();
+                    if (teamsWithRobotRunning.Count == 0)
+                    {
+                        Debug.WriteLine("No robot alive -> Draw");
+                        // Draw
+                        StopMatch(ArenaStates.NoWinner);
+                    }
+                    else if (teamsWithRobotRunning.Count == 1 && Mode != ArenaModes.Solo)
+                    {
+                        // And the winner is
+                        WinningTeam = teamsWithRobotRunning[0];
+                        Debug.WriteLine("And the winner is {0}", WinningTeam);
 
-                    StopMatch(ArenaStates.Winner);
+                        StopMatch(ArenaStates.Winner);
+                    }
                 }
             }
         }
