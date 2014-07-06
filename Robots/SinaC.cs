@@ -67,6 +67,9 @@ namespace Robots
                     //
                     _previousTime = currentTime;
                 }
+
+                // Update shared info
+                UpdateSharedInformations(SDK.LocX, SDK.LocY, SDK.Damage);
             }
         }
 
