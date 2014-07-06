@@ -44,6 +44,9 @@ namespace Robots
 
             while (true)
             {
+                // Update shared info
+                UpdateSharedInformations(SDK.LocX, SDK.LocY, SDK.Damage);
+
                 double currentTime = SDK.Time;
 
                 double elapsedTime = currentTime - _previousTime;
@@ -67,9 +70,6 @@ namespace Robots
                     //
                     _previousTime = currentTime;
                 }
-
-                // Update shared info
-                UpdateSharedInformations(SDK.LocX, SDK.LocY, SDK.Damage);
             }
         }
 
@@ -165,9 +165,14 @@ namespace Robots
                 int r = SDK.Scan(step, resolution);
                 if (r > 0)
                 {
-                    range = r;
-                    angle = step;
-                    return true;
+                    double targetX, targetY;
+                    ComputePoint(SDK.LocX, SDK.LocY, range, step, out targetX, out targetY);
+                    if (!IsFriendlyTarget(targetX, targetY))
+                    {
+                        range = r;
+                        angle = step;
+                        return true;
+                    }
                 }
             }
             return false;

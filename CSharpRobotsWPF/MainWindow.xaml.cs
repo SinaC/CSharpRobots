@@ -55,7 +55,8 @@ namespace CSharpRobotsWPF
                 //
                 _arena = Factory.CreateArena();
                 //_arena.StartSolo(typeof(CrazyCannon), 500, 500, 0, 0);
-                _arena.StartSingleMatch(typeof (SinaC), typeof (Stinger));
+                //_arena.StartSingleMatch(typeof (SinaC), typeof (Stinger));
+                _arena.StartDoubleMatch(typeof(SinaC), typeof(Stinger));
 
                 if (_arena.State == ArenaStates.Error)
                     StatusText.Text = "Error while creating match";

@@ -6,8 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Common.Clock;
 
-// TODO: add match time limit
-// BUG: sometimes robots are not started soon enough -> match is stopped considering a draw
+// TODO: 
+//  add match time limit
+//  match statistics: friend damage, cannon count, wall damage, bump damage ...
 
 namespace Arena.Internal
 {
@@ -455,7 +456,7 @@ namespace Arena.Internal
                             }
                             if (missile.LocX >= ArenaSize)
                             {
-                                Debug.WriteLine("Missile from Robot {0}[{1}] collides rigth wall", missile.Robot.Name, missile.Robot.Id);
+                                Debug.WriteLine("Missile from Robot {0}[{1}] collides right wall", missile.Robot.Name, missile.Robot.Id);
                                 missile.CollisionWall(ArenaSize - 1, missile.LocY);
                             }
                             if (missile.LocY < 0)
@@ -485,7 +486,10 @@ namespace Arena.Internal
                                     foreach (DamageByRange damageByRange in _damageByRanges)
                                         if (distance < damageByRange.Range)
                                         {
-                                            Debug.WriteLine("Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000}", missile.Robot.Name, missile.Robot.Id, robot.Name, robot.Id, damageByRange.Damage, distance);
+                                            if (robot.Team == missile.Robot.Team)
+                                                Debug.WriteLine("Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000} FRIENDLY DAMAGE", missile.Robot.Name, missile.Robot.Id, robot.Name, robot.Id, damageByRange.Damage, distance);
+                                            else
+                                                Debug.WriteLine("Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000}", missile.Robot.Name, missile.Robot.Id, robot.Name, robot.Id, damageByRange.Damage, distance);
                                             robot.TakeDamage(damageByRange.Damage);
                                             break; // missile in this range, no need to check other ranges
                                         }
@@ -508,7 +512,7 @@ namespace Arena.Internal
                     if (teamsWithRobotRunning.Count == 0)
                     {
                         Debug.WriteLine("No robot alive -> Draw");
-                        // Draw
+                        // Draw;
                         StopMatch(ArenaStates.NoWinner);
                     }
                     else if (teamsWithRobotRunning.Count == 1 && Mode != ArenaModes.Solo)
