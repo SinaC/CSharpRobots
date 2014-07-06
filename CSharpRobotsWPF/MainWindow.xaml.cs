@@ -9,7 +9,6 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Arena;
-using Robots;
 
 namespace CSharpRobotsWPF
 {
@@ -37,6 +36,8 @@ namespace CSharpRobotsWPF
         private readonly ManualResetEvent _stopEvent;
         private Task _refreshTask;
 
+        private List<Type> _robotTypes;
+
         public MainWindow()
         {
             ExecuteOnUIThread.Initialize();
@@ -44,6 +45,8 @@ namespace CSharpRobotsWPF
             InitializeComponent();
 
             _stopEvent = new ManualResetEvent(false);
+
+            //_robotTypes = LoadRobots.LoadRobotsFromPath(@"D:\GitHub\CSharpRobots\Robots\bin\Debug\");
         }
 
         private void StartButton_Click(object sender, RoutedEventArgs e)
@@ -56,7 +59,8 @@ namespace CSharpRobotsWPF
                 _arena = Factory.CreateArena();
                 //_arena.StartSolo(typeof(CrazyCannon), 500, 500, 0, 0);
                 //_arena.StartSingleMatch(typeof (SinaC), typeof (Stinger));
-                _arena.StartSingleMatch(typeof(Phalanx), typeof(Stinger));
+                _arena.StartSingleMatch(typeof(Robots.Phalanx), typeof(Robots.Stinger));
+                //_arena.StartSingleMatch(_robotTypes.FirstOrDefault(x => x.Name.Contains("Phalanx")), _robotTypes.FirstOrDefault(x => x.Name.Contains("SinaC")));
                 //_arena.StartDoubleMatch(typeof(SinaC), typeof(Stinger));
 
                 if (_arena.State == ArenaStates.Error)

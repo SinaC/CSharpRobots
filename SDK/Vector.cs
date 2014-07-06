@@ -203,7 +203,7 @@ namespace SDK
         /// <returns>the vector <paramref name="v"/> rotates by <paramref name="degrees"/> degrees.</returns>
         public static Vector Rotate(Vector v, int degrees)
         {
-            double radians = Common.Helpers.Math.ToRadians(degrees);
+            double radians = ToRadians(degrees);
             double sin = Math.Sin(radians);
             double cos = Math.Cos(radians);
             return new Vector(v.X*cos - v.Y*sin, v.X*sin + v.Y*cos);
@@ -235,5 +235,15 @@ namespace SDK
         }
 
         #endregion
+
+        private static double ToRadians(double degrees)
+        {
+            return degrees * System.Math.PI / 180.0;
+        }
+
+        private static double ToDegrees(double radians)
+        {
+            return (int)(radians * 180.0 / System.Math.PI);
+        }
     }
 }
