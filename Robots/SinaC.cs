@@ -131,7 +131,7 @@ namespace Robots
                         success = SDK.Cannon(cannonAngle, cannonRange) != 0;
                     }
                 }
-                else // If no information on speed, fire at current location
+                else // If no information on speed, fire at current enemy location
                 {
                     if (targetRange > 40 && targetRange < 750) // Don't fire if too far or too near
                     {
@@ -194,12 +194,13 @@ namespace Robots
         private void ComputeCannonInfo(double robotX, double robotY, double enemyX, double enemyY, double speedX, double speedY, out int angle, out int range)
         {
             //http://jrobots.sourceforge.net/jjr_tutorials.shtml
-            //Say P (using vector notation) the unknown point in which the missile meets the enemy, R the starting location of your robot, T the starting location of the target and V its velocity. 
+            // Say P (using vector notation) the unknown point in which the missile meets the enemy, R the starting location of your robot, T the starting location of the target and V its velocity. 
             // The target will reach the point P in t seconds, according to the formula
             // P = T + V t
             // (P - R)^2 = (300 t)^2
+            // Solving these 2 equations:
             // t = ( sqrt(300^2 D^2 - (DxV)^2) + D(dot)V ) / (300^2 - V^2)  with D = T-R
-            // t = ( sqrt(3002 (Dx2 + Dy2) - (DxVy - DyVx)2) + (DxVx + DyVy) ) / (3002 - (Vx2 + Vy2) )
+            // t = ( sqrt(300^2 (Dx^2 + Dy^2) - (DxVy - DyVx)^2) + (DxVx + DyVy) ) / (300^2 - (Vx^2 + Vy^2) )
             double dX = enemyX - robotX;
             double dY = enemyY - robotY;
             double t = SDK.Sqrt(300*300*(dX*dX + dY*dY) - (dX*speedY - dY*speedX)*(dX*speedY - dY*speedX) + 0.5)/(300*300 - (speedX*speedX + speedY*speedY));

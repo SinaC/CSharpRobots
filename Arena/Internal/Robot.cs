@@ -311,7 +311,7 @@ namespace Arena.Internal
         {
             get
             {
-                //Thread.Yield(); // Give time to others
+                Thread.Yield(); // Give time to others
                 return Tick.ElapsedSeconds(_matchStart);
             }
         }
