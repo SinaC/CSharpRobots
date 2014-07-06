@@ -1,12 +1,24 @@
 ﻿using SDK;
 
-// TODO: when approching border/corner stop driving randomly and go opposite direction
+// TODO: 
+//  when approching border/corner stop driving randomly and go opposite direction
+//  use IsFriendlyTarget to avoid shooting to friend and get a new target --> new FindTarget method
 
 namespace Robots
 {
     public class SinaC : Robot
     {
         public override string Name { get { return "SinaC"; } }
+
+        public static readonly double FriendRangeSquared = 80*80;
+
+        // Shared infos between team members
+        private static readonly int[] TeamLocX = new int[8];
+        private static readonly int[] TeamLocY = new int[8];
+        private static readonly int[] TeamDamage = new int[8];
+
+        private int _teamCount;
+        private int _id; // own id
 
         double _previousSuccessfulShootTime;
         double _previousTime;
@@ -20,7 +32,12 @@ namespace Robots
         public override void Main()
         {
             _previousTime = SDK.Time;
-            
+
+            _teamCount = SDK.FriendsCount;
+            _id = SDK.Id;
+
+            UpdateSharedInformations(SDK.LocX, SDK.LocY, SDK.Damage);
+
             DriveRandomly();
             FireOnTarget();
             _previousSuccessfulShootTime = SDK.Time;
@@ -51,6 +68,27 @@ namespace Robots
                     _previousTime = currentTime;
                 }
             }
+        }
+
+        private void UpdateSharedInformations(int locX, int locY, int damage)
+        {
+            TeamLocX[_id] = locX;
+            TeamLocY[_id] = locY;
+            TeamDamage[_id] = damage;
+        }
+
+        private bool IsFriendlyTarget(double locX, double locY)
+        {
+            if (_teamCount > 1)
+                for(int i = 0; i < _teamCount; i++)
+                    if (i != _id)
+                    {
+                        double dx = locX - TeamLocX[i];
+                        double dy = locY - TeamLocY[i];
+                        if (dx*dx + dy*dy < FriendRangeSquared)
+                            return true;
+                    }
+            return false;
         }
 
         private void FireOnTarget()
