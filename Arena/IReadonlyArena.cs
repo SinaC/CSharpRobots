@@ -4,6 +4,10 @@ using Common.Clock;
 
 namespace Arena
 {
+    public delegate void ArenaStartedHandler(IReadonlyArena arena);
+    public delegate void ArenaStoppedHandler(IReadonlyArena arena);
+    public delegate void ArenaStepHandler(IReadonlyArena arena);
+
     public interface IReadonlyArena
     {
         ArenaStates State { get; }
@@ -18,10 +22,16 @@ namespace Arena
         List<IReadonlyRobot> Robots { get; }
         List<IReadonlyMissile> Missiles { get; }
 
-        void StartSolo(Type robotType, int locX, int locY, int heading, int speed);
-        void StartSingleMatch(Type team1, Type team2);
-        void StartDoubleMatch(Type team1, Type team2);
-        void StartTeamMatch(Type team1, Type team2, Type team3, Type team4);
+        event ArenaStartedHandler ArenaStarted;
+        event ArenaStoppedHandler ArenaStopped;
+        event ArenaStepHandler ArenaStep;
+
+        void InitializeSolo(Type robotType, int locX, int locY, int heading, int speed);
+        void InitializeSingleMatch(Type team1, Type team2);
+        void InitializeDoubleMatch(Type team1, Type team2);
+        void InitializeTeamMatch(Type team1, Type team2, Type team3, Type team4);
+
+        void StartMatch();
         void StopMatch();
     }
 }

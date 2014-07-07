@@ -1,5 +1,7 @@
-Replace Main in SDK Robot with Step+Init (called periodically) -> adapt every existing robots
+*Remove Task in UI, replace with async event/delegate fired Arena  (search on .net async delegate c#)  ArenaStarted(), ArenaStopped(reason), ArenaStep(Robots[], Missiles[])
+*Replace Main in SDK Robot with Step+Init (called periodically) -> adapt every existing robots
+SDK accessible collection of parameters such as ArenaSize, MaxSpeed, ... Dictonary<string, double>
 Add watchdog to monitor user Robot and stop a match if a team is considered as cheater by using too many CPU time
-Remove Task in UI, replace with async event/delegate fired Arena  (search on .net async delegate c#)  ArenaStarted(), ArenaStopped(reason), ArenaStep(Robots[], Missiles[])
 Split robots creation from arena start
 Load robot dynamically from DLL (dll found in specified directory in app.config)
+redo speed/acceleration management using double

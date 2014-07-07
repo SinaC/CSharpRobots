@@ -29,9 +29,16 @@ namespace Robots
         double _previousSpeedX;
         double _previousSpeedY;
 
+        private int _missileSpeed;
+        private int _maxExplosionRange;
+        private int _maxExplosionRangePlusCannonRange;
+
         public override void Main()
         {
             _previousTime = SDK.Time;
+            _missileSpeed = SDK.Parameters["MissileSpeed"];
+            _maxExplosionRange = SDK.Parameters["MaxExplosionRange"];
+            _maxExplosionRangePlusCannonRange = SDK.Parameters["MaxExplosionRange"] + SDK.Parameters["MaxCannonRange"];
 
             _teamCount = SDK.FriendsCount;
             _id = SDK.Id;
@@ -100,7 +107,7 @@ namespace Robots
             bool targetFound = FindTarget(1, out currentAngle, out currentRange);
             if (targetFound)
             {
-                if (currentRange < 750) // Don't fire if too far
+                if (currentRange < _maxExplosionRangePlusCannonRange) // Don't fire if too far
                     SDK.Cannon(currentAngle, currentRange);
             }
         }
@@ -126,14 +133,14 @@ namespace Robots
                     int cannonAngle, cannonRange;
                     ComputeCannonInfo(SDK.LocX, SDK.LocY, currentEnemyX, currentEnemyY, currentSpeedX, currentSpeedY, out cannonAngle, out cannonRange);
 
-                    if (cannonRange > 40 && cannonRange < 750) // Don't fire if too far
+                    if (cannonRange > _maxExplosionRange && cannonRange < _maxExplosionRangePlusCannonRange) // Don't fire if too far
                     {
                         success = SDK.Cannon(cannonAngle, cannonRange) != 0;
                     }
                 }
                 else // If no information on speed, fire at current enemy location
                 {
-                    if (targetRange > 40 && targetRange < 750) // Don't fire if too far or too near
+                    if (targetRange > _maxExplosionRange && targetRange < _maxExplosionRangePlusCannonRange) // Don't fire if too far or too near
                     {
                         success = SDK.Cannon(targetAngle, targetRange) != 0;
                     }
@@ -203,7 +210,7 @@ namespace Robots
             // t = ( sqrt(300^2 (Dx^2 + Dy^2) - (DxVy - DyVx)^2) + (DxVx + DyVy) ) / (300^2 - (Vx^2 + Vy^2) )
             double dX = enemyX - robotX;
             double dY = enemyY - robotY;
-            double t = SDK.Sqrt(300*300*(dX*dX + dY*dY) - (dX*speedY - dY*speedX)*(dX*speedY - dY*speedX) + 0.5)/(300*300 - (speedX*speedX + speedY*speedY));
+            double t = SDK.Sqrt(_missileSpeed * _missileSpeed * (dX * dX + dY * dY) - (dX * speedY - dY * speedX) * (dX * speedY - dY * speedX) + 0.5) / (_missileSpeed * _missileSpeed - (speedX * speedX + speedY * speedY));
             double pX = enemyX + speedX*t;
             double pY = enemyY + speedY*t;
 

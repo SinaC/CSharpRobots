@@ -1,4 +1,6 @@
-﻿namespace SDK
+﻿using System.Collections.Generic;
+
+namespace SDK
 {
     //http://jrobots.sourceforge.net/jjr_info.shtml
 
@@ -61,6 +63,11 @@
         /// Gives 1 for Single, 2 for Double and 8 for Team
         /// </summary>
         int FriendsCount { get; }
+
+        /// <summary>
+        /// Stores arena/robot parameters such as MaxSpeed, ArenaSize, ...
+        /// </summary>
+        IReadOnlyDictionary<string, int> Parameters { get; }
 
         #region Math
 

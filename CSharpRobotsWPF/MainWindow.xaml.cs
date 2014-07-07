@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -29,14 +26,12 @@ namespace CSharpRobotsWPF
         private static readonly Brush Explosion20Brush = new SolidColorBrush(Colors.Orange);
         private static readonly Brush Explosion40Brush = new SolidColorBrush(Colors.Yellow);
 
-        private IReadonlyArena _arena;
+        private readonly IReadonlyArena _arena;
+
         private List<WPFRobot> _wpfRobots;
         private List<WPFMissile> _wpfMissiles;
 
-        private readonly ManualResetEvent _stopEvent;
-        private Task _refreshTask;
-
-        private List<Type> _robotTypes;
+        //private List<Type> _robotTypes;
 
         public MainWindow()
         {
@@ -44,31 +39,58 @@ namespace CSharpRobotsWPF
 
             InitializeComponent();
 
-            _stopEvent = new ManualResetEvent(false);
+            _arena = Factory.CreateArena();
+            _arena.ArenaStarted += OnArenaStarted;
+            _arena.ArenaStopped += OnArenaStopped;
+            _arena.ArenaStep += OnArenaStep;
 
             //_robotTypes = LoadRobots.LoadRobotsFromPath(@"D:\GitHub\CSharpRobots\Robots\bin\Debug\");
         }
 
+        private void OnArenaStep(IReadonlyArena arena)
+        {
+            ExecuteOnUIThread.Invoke(Refresh);
+        }
+
+        private void OnArenaStopped(IReadonlyArena arena)
+        {
+            ExecuteOnUIThread.Invoke(() =>
+            {
+                StartButton.Content = "Start";
+                UpdateStatus();
+            });
+        }
+
+        private void OnArenaStarted(IReadonlyArena arena)
+        {
+            ExecuteOnUIThread.Invoke(() =>
+            {
+                StartButton.Content = "Stop";
+                UpdateStatus();
+            });
+        }
+
         private void StartButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_arena != null && _arena.State == ArenaStates.Running)
+            if (_arena == null)
+                return;
+            if (_arena.State == ArenaStates.Running)
                 _arena.StopMatch();
             else
             {
-                //
-                _arena = Factory.CreateArena();
-                //_arena.StartSolo(typeof(CrazyCannon), 500, 500, 0, 0);
-                //_arena.StartSingleMatch(typeof (SinaC), typeof (Stinger));
-                _arena.StartSingleMatch(typeof(Robots.Phalanx), typeof(Robots.Stinger));
-                //_arena.StartSingleMatch(_robotTypes.FirstOrDefault(x => x.Name.Contains("Phalanx")), _robotTypes.FirstOrDefault(x => x.Name.Contains("SinaC")));
-                //_arena.StartDoubleMatch(typeof(SinaC), typeof(Stinger));
+                // Initialize robots
+                //_arena.InitializeSolo(typeof(CrazyCannon), 500, 500, 0, 0);
+                //_arena.InitializeSingleMatch(typeof (SinaC), typeof (Stinger));
+                //_arena.InitializeSingleMatch(typeof(Robots.Phalanx), typeof(Robots.Stinger));
+                //_arena.InitializeSingleMatch(typeof(Robots.Rook), typeof(Robots.Rabbit));
+                //_arena.InitializeSingleMatch(_robotTypes.FirstOrDefault(x => x.Name.Contains("Phalanx")), _robotTypes.FirstOrDefault(x => x.Name.Contains("SinaC")));
+                _arena.InitializeDoubleMatch(typeof(Robots.SinaC), typeof(Robots.Stinger));
 
                 if (_arena.State == ArenaStates.Error)
                     StatusText.Text = "Error while creating match";
                 else
                 {
-                    StartButton.Content = "Stop";
-                    //
+                    // Create WPF robots
                     BattlefieldCanvas.Children.Clear();
                     _wpfMissiles = new List<WPFMissile>();
                     _wpfRobots = new List<WPFRobot>();
@@ -78,48 +100,10 @@ namespace CSharpRobotsWPF
                     //
                     RobotInformationsList.DataContext = _wpfRobots;
 
-                    //
-                    _refreshTask = new Task(RefreshLoop);
-                    _refreshTask.Start();
+                    // Start match
+                    _arena.StartMatch();
                 }
             }
-        }
-
-        private void RefreshLoop()
-        {
-            const double refreshTime = 100;
-            Stopwatch sw = new Stopwatch();
-            while (true)
-            {
-                if (_arena.State == ArenaStates.Stopped || _arena.State == ArenaStates.NoWinner || _arena.State == ArenaStates.Winner || _arena.State == ArenaStates.Error)
-                {
-                    ExecuteOnUIThread.Invoke(Refresh); // Last refresh
-                    break;
-                }
-
-                sw.Reset();
-                sw.Start();
-
-                ExecuteOnUIThread.Invoke(Refresh);
-
-                sw.Stop();
-                double elapsed = sw.ElapsedMilliseconds;
-                int sleepTime = (int) (refreshTime - elapsed);
-                if (sleepTime < 0)
-                    sleepTime = 1;
-                //Debug.WriteLine("WPF: Elapsed {0:0.0000} -> Sleep {1}", elapsed, sleepTime);
-                bool stopAsked = _stopEvent.WaitOne(sleepTime);
-                if (stopAsked)
-                {
-                    Debug.WriteLine("WPF: Stop event received. Stopping main loop");
-                    break;
-                }
-            }
-            ExecuteOnUIThread.Invoke(() =>
-                {
-                    StartButton.Content = "Start";
-                    UpdateStatus();
-                });
         }
 
         private void Refresh()

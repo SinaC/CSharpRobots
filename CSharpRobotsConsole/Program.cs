@@ -1,4 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Arena;
 using Common.Clock;
 using Robots;
@@ -14,21 +20,24 @@ namespace CSharpRobotsConsole
             Console.BufferHeight = 60;
 
             IReadonlyArena arena = Factory.CreateArena();
-            //arena.StartSolo(typeof(Surveyor), 0, 500, 0, 0);
-            //arena.StartSingleMatch(typeof(Counter), typeof(Sniper));
-            arena.StartSingleMatch(typeof(SinaC), typeof(Surveyor));
-            //arena.StartTeamMatch(typeof(Follower), typeof(Rabbit), typeof(Counter), typeof(Sniper));
+            arena.ArenaStep += DisplayArena;
+
+            //arena.InitializeSolo(typeof(Surveyor), 0, 500, 0, 0);
+            //arena.InitializeSingleMatch(typeof(Counter), typeof(Sniper));
+            arena.InitializeSingleMatch(typeof(SinaC), typeof(Surveyor));
+            //arena.InitializeTeamMatch(typeof(Follower), typeof(Rabbit), typeof(Counter), typeof(Sniper));
             if (arena.State == ArenaStates.Error)
             {
-                Console.WriteLine("Error while starting arena match!!!");
+                Console.WriteLine("Error while initializing arena match!!!");
                 return;
             }
+
+            arena.StartMatch();
+
             bool stopped = false;
             while (!stopped)
             {
-                if (arena.State == ArenaStates.Running)
-                    DisplayArena(arena);
-                else
+                if (arena.State != ArenaStates.Running)
                 {
                     if (arena.State == ArenaStates.Error)
                         Console.WriteLine("Arena is in error");
@@ -151,5 +160,116 @@ namespace CSharpRobotsConsole
                     DisplayExplosion(x, y);
             }
         }
+
+        //static void OnArenaStarted(int id)
+        //{
+        //    System.Diagnostics.Debug.WriteLine("OnArenaStarted: begin");
+        //    Thread.Sleep(5000);
+        //    System.Diagnostics.Debug.WriteLine("OnArenaStarted: end");
+        //}
+
+        //static void OnArenaStopped(int id, string toto)
+        //{
+        //    System.Diagnostics.Debug.WriteLine("OnArenaStopped: begin");
+        //    Thread.Sleep(5000);
+        //    System.Diagnostics.Debug.WriteLine("OnArenaStopped: end");
+        //}
+        //static void Main2(string[] args)
+        //{
+        //    Test test = new Test();
+        //    test.ArenaStarted += OnArenaStarted;
+        //    test.ArenaStarted += OnArenaStarted;
+        //    test.ArenaStarted += OnArenaStarted;
+        //    test.ArenaStopped += OnArenaStopped;
+        //    test.ArenaStopped += OnArenaStopped;
+        //    test.ArenaStopped += OnArenaStopped;
+        //    System.Diagnostics.Debug.WriteLine("Firing start event");
+        //    test.FireStartEvent();
+        //    System.Diagnostics.Debug.WriteLine("Event start fired");
+
+        //    System.Diagnostics.Debug.WriteLine("Firing stop event");
+        //    //test.FireStopEvent();
+        //    System.Diagnostics.Debug.WriteLine("Event stop fired");
+
+        //    Console.ReadKey();
+        //}
     }
+
+    //public class Test
+    //{
+    //    public delegate void ArenaStartedEventHandler(int id);
+    //    public event ArenaStartedEventHandler ArenaStarted;
+
+    //    public delegate void ArenaStoppedEventHandler(int id, string reason);
+    //    public event ArenaStoppedEventHandler ArenaStopped;
+
+    //    private static void OnActionCompleted(IAsyncResult result)
+    //    {
+    //        //http://stackoverflow.com/questions/11392978/c-sharp-calling-endinvoke-in-callback-using-generics
+    //        dynamic action = result.AsyncState;
+    //        action.EndInvoke(result);
+    //    }
+
+    //    public void FireStartEvent2()
+    //    {
+    //        if (ArenaStarted != null)
+    //        {
+    //            foreach (ArenaStartedEventHandler handler in ArenaStarted.GetInvocationList())
+    //                Execute(0, handler.Invoke);
+    //            //handler.BeginInvoke(0, OnActionCompleted, handler);
+    //        }
+    //    }
+
+    //    public void FireStartEvent()
+    //    {
+    //        if (ArenaStarted != null)
+    //        {
+    //            //List<Action<int>> invokes = ArenaStarted.GetInvocationList().Cast<ArenaStartedEventHandler>().Select<ArenaStartedEventHandler,Action<int>>(x => x.Invoke).ToList();
+    //            //foreach(Action<int> invoke in invokes)
+    //            //    Execute(0, invoke);
+    //            //ArenaStarted.GetInvocationList().Cast<ArenaStartedEventHandler>().ToList().ForEach(x => Execute(0, x.Invoke));
+    //            //Array.ForEach(ArenaStarted.GetInvocationList(), x => Execute(0, (x as ArenaStartedEventHandler).Invoke));
+
+    //            //IAsyncResult res = ArenaStarted.BeginInvoke(0, Callback, ArenaStarted);
+    //            System.Diagnostics.Debug.WriteLine("+++FireStartEvent before");
+    //            foreach (ArenaStartedEventHandler handler in ArenaStarted.GetInvocationList())
+    //            {
+    //                ArenaStartedEventHandler handler1 = handler;
+    //                Task.Run(() => handler1.Invoke(0));
+    //            }
+    //            System.Diagnostics.Debug.WriteLine("---FireStartEvent after");
+    //        }
+    //    }
+
+    //    public void FireStopEvent()
+    //    {
+    //        if (ArenaStopped != null)
+    //            foreach (ArenaStoppedEventHandler handler in ArenaStopped.GetInvocationList())
+    //                Execute(0, "toto", handler.Invoke);
+    //        //handler.BeginInvoke(0, "toto", OnActionCompleted, handler);
+    //    }
+
+    //    //public void Fire<T>(T param, Delegate delegates)
+    //    //{
+    //    //    foreach(Delegate handler in delegates.GetInvocationList())
+    //    //        Execute(param, Callback, handler.DynamicInvoke);
+    //    //}
+
+    //    public static void Execute<T>(T param, Action<T> action)
+    //    {
+    //        action.BeginInvoke(param, Callback, action);
+    //    }
+
+    //    public static void Execute<T1, T2>(T1 param1, T2 param2, Action<T1, T2> action)
+    //    {
+    //        action.BeginInvoke(param1, param2, Callback, action);
+    //    }
+
+    //    private static void Callback(IAsyncResult ar)
+    //    {
+    //        Action action = ar.AsyncState as Action;
+    //        if (action != null)
+    //            action.EndInvoke(ar);
+    //    }
+    //}
 }

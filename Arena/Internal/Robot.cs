@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Common.Clock;
@@ -6,20 +7,11 @@ using SDK;
 
 // TODO: 
 // Handle speed/acceleration in a different way, use m/s instead of %age of MaxSpeed   SDK.Speed will return a percentage based on computed speed
-// Thread.Yield(); in every SDK API but not in IReadonlyRobot (2 different versions if exists in both)
 
 namespace Arena.Internal
 {
     internal class Robot : ISDKRobot, IReadonlyRobot
     {
-        public static readonly double TrigonometricBias = 100000;
-        public static readonly double MaxSpeed = 30; // in m/s
-        public static readonly int MaxDamage = 100;
-        public static readonly int MaxResolution = 20; // in degrees
-        public static readonly int MaxCannonRange = 700; // in meters
-        public static readonly int MaxAcceleration = 5; // acceleration factor in m/s
-        public static readonly int MaxTurnSpeed = 50; // maximum speed for direction change
-
         private CancellationTokenSource _cancellationTokenSource;
         private Task _mainTask;
 
@@ -38,7 +30,6 @@ namespace Arena.Internal
         private double _originX; // X-component before changing heading
         private double _originY; // Y-component before changing heading
         private double _currentDistance; // Distance traveled in this heading
-
         public Tick LastMissileLaunchTick { get; private set; }
 
         public double RawLocX { get; private set; }
@@ -160,7 +151,7 @@ namespace Arena.Internal
                 {
                     //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowing. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
 
-                    _acceleration -= ((MaxAcceleration*realStepTime)/1000.0)*(100.0/MaxSpeed);
+                    _acceleration -= ((ParametersSingleton.MaxAcceleration*realStepTime)/1000.0)*(100.0/ParametersSingleton.MaxSpeed);
                     if (_acceleration < _desiredSpeed)
                     {
                         Speed = _desiredSpeed;
@@ -175,7 +166,7 @@ namespace Arena.Internal
                 {
                     //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerating. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
 
-                    _acceleration += ((MaxAcceleration*realStepTime)/1000.0)*(100.0/MaxSpeed);
+                    _acceleration += ((ParametersSingleton.MaxAcceleration*realStepTime)/1000.0)*(100.0/ParametersSingleton.MaxSpeed);
                     if (_acceleration > _desiredSpeed)
                     {
                         Speed = _desiredSpeed;
@@ -196,7 +187,7 @@ namespace Arena.Internal
             {
                 //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} updating heading. Heading {2} Desired Heading {3} RawLocX {4} RawLocY {5} Speed {6}", Id, Team, Heading, _desiredHeading, RawLocX, RawLocY, Speed);
 
-                if (Speed <= MaxTurnSpeed)
+                if (Speed <= ParametersSingleton.MaxTurnSpeed)
                 {
                     Heading = _desiredHeading;
                     _currentDistance = 0;
@@ -220,7 +211,7 @@ namespace Arena.Internal
             {
                 //CurrentDistance += ((MaxSpeed*Speed/100.0)*Arena.StepDelay)/1000.0; // new speed is considered only once by simulation step   GRRRRRR 2 hours lost to find we have to compute real elapsed time between 2 steps because System.Timers.Timer is not precise enough
                 // Speed is in percentage of MaxSpeed, realStepTime is in milliseconds and MaxSpeed is in m/s
-                _currentDistance += ((MaxSpeed * Speed / 100.0) * realStepTime) / 1000.0;
+                _currentDistance += ((ParametersSingleton.MaxSpeed * Speed / 100.0) * realStepTime) / 1000.0;
                 double newX, newY;
                 Common.Helpers.Math.ComputePoint(_originX, _originY, _currentDistance, Heading, out newX, out newY);
                 RawLocX = newX;
@@ -234,7 +225,7 @@ namespace Arena.Internal
         {
             Damage += damage;
             System.Diagnostics.Debug.WriteLine("Robot {0} | {1} takes {2} damage => {3} total damage", Id, Team, damage, Damage);
-            if (Damage >= MaxDamage)
+            if (Damage >= ParametersSingleton.MaxDamage)
             {
                 State = RobotStates.Destroyed;
                 System.Diagnostics.Debug.WriteLine("Robot {0} | {1} destroyed", Id, Team);
@@ -257,9 +248,9 @@ namespace Arena.Internal
 
         #region IReadonlyRobot + ISDKRobot
 
-        public int Id { get; private set; } // TODO: yield
+        public int Id { get; private set; }
 
-        public int LocX // TODO: yield
+        public int LocX
         {
             get
             {
@@ -267,7 +258,7 @@ namespace Arena.Internal
             }
         }
 
-        public int LocY // TODO: yield
+        public int LocY
         {
             get
             {
@@ -275,7 +266,7 @@ namespace Arena.Internal
             }
         }
 
-        public int Damage // TODO: yield
+        public int Damage
         {
             get
             {
@@ -287,7 +278,7 @@ namespace Arena.Internal
             }
         }
 
-        public int Speed { get; private set; } // TODO: yield
+        public int Speed { get; private set; }
 
         #endregion
 
@@ -303,6 +294,11 @@ namespace Arena.Internal
 
         public int CannonCount { get; private set; }
 
+        public IReadOnlyDictionary<string, int> Parameters
+        {
+            get { return ParametersSingleton.Instance.Parameters; }
+        }
+
         #endregion
 
         #region ISDKRobot
@@ -311,30 +307,24 @@ namespace Arena.Internal
         {
             get
             {
-                Thread.Yield(); // Give time to others
                 return Tick.ElapsedSeconds(_matchStart);
             }
         }
 
         public int Cannon(int degrees, int range)
         {
-            Thread.Yield(); // Give time to others
+            Thread.Sleep(1); // give time to others
             //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Cannon {2} {3}.", Id, Team, degrees, range);
             if (_damage > 100) // too damaged
-            {
-                Thread.Yield(); // Give time to others
                 return 0;
-            }
 
             degrees = FixDegrees(degrees);
             range = FixCannonRange(range);
             double elapsed = LastMissileLaunchTick == null ? double.MaxValue : Tick.ElapsedSeconds(LastMissileLaunchTick);
             if (elapsed < 1) // reload
-            {
-                Thread.Yield(); // Give time to others
                 return 0;
-            }
-            System.Diagnostics.Debug.WriteLine("Robot {0}[{1}] shooting interval {2}", Name, Id, elapsed);
+
+            //System.Diagnostics.Debug.WriteLine("Robot {0}[{1}] shooting interval {2}", Name, Id, elapsed);
             CannonCount++;
             LastMissileLaunchTick = Tick.Now;
             int result = _arena.Cannon(this, LastMissileLaunchTick, degrees, range);
@@ -343,7 +333,7 @@ namespace Arena.Internal
 
         public void Drive(int degrees, int speed)
         {
-            Thread.Yield(); // Give time to others
+            Thread.Sleep(1); // give time to others
             //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Drive {2} {3}.", Id, Team, degrees, speed);
 
             degrees = FixDegrees(degrees);
@@ -356,13 +346,10 @@ namespace Arena.Internal
 
         public int Scan(int degrees, int resolution)
         {
-            Thread.Yield();
+            Thread.Sleep(1); // give time to others
             //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Scan {2} {3}.", Id, Team, degrees, resolution);
             if (_damage > 100) // too damaged
-            {
-                Thread.Yield(); // Give time to others
                 return 0;
-            }
 
             degrees = FixDegrees(degrees);
             resolution = FixResolution(resolution);
@@ -389,22 +376,22 @@ namespace Arena.Internal
 
         public int Sin(int degrees)
         {
-            return (int) (Math.Sin(Common.Helpers.Math.ToRadians(degrees))*TrigonometricBias);
+            return (int) (Math.Sin(Common.Helpers.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
         }
 
         public int Cos(int degrees)
         {
-            return (int) (Math.Cos(Common.Helpers.Math.ToRadians(degrees))*TrigonometricBias);
+            return (int) (Math.Cos(Common.Helpers.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
         }
 
         public int Tan(int degrees)
         {
-            return (int) (Math.Tan(Common.Helpers.Math.ToRadians(degrees))*TrigonometricBias);
+            return (int) (Math.Tan(Common.Helpers.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
         }
 
         public int ATan(int value)
         {
-            return (int) Common.Helpers.Math.ToDegrees(Math.Atan(value/TrigonometricBias));
+            return (int) Common.Helpers.Math.ToDegrees(Math.Atan(value/ParametersSingleton.TrigonometricBias));
         }
 
         public double Sqrt(double value)
@@ -507,8 +494,8 @@ namespace Arena.Internal
         {
             if (range < 0)
                 range = 0;
-            if (range > MaxCannonRange)
-                range = MaxCannonRange;
+            if (range > ParametersSingleton.MaxCannonRange)
+                range = ParametersSingleton.MaxCannonRange;
             return range;
         }
 
@@ -516,8 +503,8 @@ namespace Arena.Internal
         {
             if (resolution < 0)
                 resolution = 0;
-            if (resolution > MaxResolution)
-                resolution = MaxResolution;
+            if (resolution > ParametersSingleton.MaxResolution)
+                resolution = ParametersSingleton.MaxResolution;
             return resolution;
         }
 

@@ -4,13 +4,10 @@ namespace Arena.Internal
 {
     internal class Missile : IReadonlyMissile
     {
-        public static readonly int MissileSpeed = 300; // in m/s
-
         private readonly Tick _launchTick;
 
         // When a missile has exploded, it stays in state Explosed during x milliseconds
         private Tick _explosionTick;
-
         // Current distance
         public double CurrentDistance { get; private set; }
 
@@ -68,7 +65,7 @@ namespace Arena.Internal
         public void UpdatePosition(double realStepTime)
         {
             // Update distance
-            CurrentDistance += (MissileSpeed * realStepTime) / 1000.0;
+            CurrentDistance += (ParametersSingleton.MissileSpeed * realStepTime) / 1000.0;
             if (CurrentDistance > Range) // if missile goes too far, get it back :)
                 CurrentDistance = Range;
             // Update location

@@ -42,6 +42,7 @@
     <Compile Include="ArenaStates.cs" />
     <Compile Include="Internal\Arena.cs" />
     <Compile Include="Factory.cs" />
+    <Compile Include="Internal\Parameters.cs" />
     <Compile Include="IReadonlyMissile.cs" />
     <Compile Include="Internal\Robot.cs" />
     <Compile Include="IReadonlyArena.cs" />
