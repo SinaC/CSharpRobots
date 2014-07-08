@@ -2,45 +2,52 @@
 
 namespace Robots
 {
+    // TODO: convert
     //JJRobots (c) 2000 L.Boselli - boselli@uno.it
     public class Phalanx : SDK.Robot
     {
-        public override string Name
+        public override void Init()
         {
-            get { return "Phalanx"; }
+            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
         }
 
+        public override void Step()
+        {
+            // NOP
+        }
+
+
         private static int counter;
-private static int firstCorner;
+        private static int firstCorner;
 
-private static int[] cornerX = {50,950,950,50};
-private static int[] cornerY = {50,50,950,950};
-private static double lastTargetX;
-private static double lastTargetY;
-private static double lastTargetSpeedX;
-private static double lastTargetSpeedY;
-private static double lastTargetTime;
-private static int[] locX = new int[8];
-private static int[] locY = new int[8];
+        private static int[] cornerX = {50, 950, 950, 50};
+        private static int[] cornerY = {50, 50, 950, 950};
+        private static double lastTargetX;
+        private static double lastTargetY;
+        private static double lastTargetSpeedX;
+        private static double lastTargetSpeedY;
+        private static double lastTargetTime;
+        private static int[] locX = new int[8];
+        private static int[] locY = new int[8];
 
-private double oldTargetX;
-private double oldTargetY;
-private double targetX;
-private double targetY;
-private double speedX;
-private double speedY;
-private double lastTime;
-private double lastShotTime;
-private bool foundEnemy;
-private int resolution;
-private int corner;
-private int driveStatus;
-private int range;
-private int scan;
-private int drive;
-private int id;
+        private double oldTargetX;
+        private double oldTargetY;
+        private double targetX;
+        private double targetY;
+        private double speedX;
+        private double speedY;
+        private double lastTime;
+        private double lastShotTime;
+        private bool foundEnemy;
+        private int resolution;
+        private int corner;
+        private int driveStatus;
+        private int range;
+        private int scan;
+        private int drive;
+        private int id;
 
-        public override void Main()
+        public void Main()
         {
             if ((id = SDK.Id) == 0)
             {
@@ -96,7 +103,7 @@ private int id;
             }
             else
             {
-                drive = SDK.ATan(dy * 100000 / dx);
+                drive = SDK.ATan(dy*100000/dx);
                 if (dx < 0) drive += 180;
             }
             SDK.Drive(drive, 100);
@@ -153,8 +160,8 @@ private int id;
             if ((range = SDK.Scan(scan, resolution)) == 0) return false;
             double time;
             double deltaT = (time = SDK.Time) - lastTime;
-            targetX = (locX[id] = SDK.LocX) + range * SDK.Cos(scan) / 100000.0;
-            targetY = (locY[id] = SDK.LocY) + range * SDK.Sin(scan) / 100000.0;
+            targetX = (locX[id] = SDK.LocX) + range*SDK.Cos(scan)/100000.0;
+            targetY = (locY[id] = SDK.LocY) + range*SDK.Sin(scan)/100000.0;
             if (isTargetAFriend())
             {
                 scan += resolution;
@@ -162,11 +169,11 @@ private int id;
             }
             if (resolution == 1 && deltaT > 0.5)
             {
-                double theSpeedX = (targetX - oldTargetX) / deltaT;
-                double theSpeedY = (targetY - oldTargetY) / deltaT;
+                double theSpeedX = (targetX - oldTargetX)/deltaT;
+                double theSpeedY = (targetY - oldTargetY)/deltaT;
                 lastTargetX = oldTargetX = targetX;
                 lastTargetY = oldTargetY = targetY;
-                double speed2 = theSpeedX * theSpeedX + theSpeedY * theSpeedY;
+                double speed2 = theSpeedX*theSpeedX + theSpeedY*theSpeedY;
                 if (speed2 > 0)
                 {
                     if (speed2 < 1600)
@@ -212,7 +219,7 @@ private int id;
             {
                 if (range > 740)
                 {
-                    scan += resolution * 2;
+                    scan += resolution*2;
                 }
                 else
                 {
@@ -229,8 +236,8 @@ private int id;
         private void fireToLastTarget()
         {
             fireTo(
-              lastTargetX, lastTargetY, lastTargetSpeedX, lastTargetSpeedY, lastTargetTime
-            );
+                lastTargetX, lastTargetY, lastTargetSpeedX, lastTargetSpeedY, lastTargetTime
+                );
         }
 
         private void fireTo(double x, double y, double sx, double sy, double t)
@@ -239,8 +246,8 @@ private int id;
             double Dx, Dy;
             if (deltaT > 0)
             {
-                x += sx * deltaT;
-                y += sy * deltaT;
+                x += sx*deltaT;
+                y += sy*deltaT;
                 Dx = x - (locX[id] = SDK.LocX);
                 Dy = y - (locY[id] = SDK.LocY);
             }
@@ -249,14 +256,14 @@ private int id;
                 Dx = x - locX[id];
                 Dy = y - locY[id];
             }
-            double dxsymdysx = Dx * sy - Dy * sx;
+            double dxsymdysx = Dx*sy - Dy*sx;
             double tp =
-              (SDK.Sqrt((Dx * Dx + Dy * Dy) * 90000 - dxsymdysx * dxsymdysx) + Dx * sx + Dy * sy) /
-              (90000 - sx * sx - sy * sy)
-            ;
-            double rx = Dx + sx * tp;
-            double ry = Dy + sy * tp;
-            double r2 = rx * rx + ry * ry;
+                (SDK.Sqrt((Dx*Dx + Dy*Dy)*90000 - dxsymdysx*dxsymdysx) + Dx*sx + Dy*sy)/
+                (90000 - sx*sx - sy*sy)
+                ;
+            double rx = Dx + sx*tp;
+            double ry = Dy + sy*tp;
+            double r2 = rx*rx + ry*ry;
             if (r2 > 1600 && r2 < 547600)
             {
                 double angle;
@@ -266,10 +273,10 @@ private int id;
                 }
                 else
                 {
-                    angle = SDK.ATan(ry / rx);
+                    angle = SDK.ATan(ry/rx);
                     if (rx < 0) angle += 3.1416;
                 }
-                int degrees = (int)(angle * 180 / 3.1416);
+                int degrees = (int) (angle*180/3.1416);
                 if (SDK.Cannon(degrees, (int) (SDK.Sqrt(r2) + 0.5)) != 0) lastShotTime = SDK.Time;
             }
         }
@@ -282,9 +289,9 @@ private int id;
                 {
                     if (ct != id)
                     {
-                        int dx = (int)(targetX - locX[ct]);
-                        int dy = (int)(targetY - locY[ct]);
-                        if (dx * dx + dy * dy < 6400) return true;
+                        int dx = (int) (targetX - locX[ct]);
+                        int dy = (int) (targetY - locY[ct]);
+                        if (dx*dx + dy*dy < 6400) return true;
                     }
                 }
             }
@@ -299,9 +306,9 @@ private int id;
                 {
                     if (ct != id)
                     {
-                        int dx = (int)(lastTargetX - locX[ct]);
-                        int dy = (int)(lastTargetY - locY[ct]);
-                        if (dx * dx + dy * dy < 6400) return true;
+                        int dx = (int) (lastTargetX - locX[ct]);
+                        int dy = (int) (lastTargetY - locY[ct]);
+                        if (dx*dx + dy*dy < 6400) return true;
                     }
                 }
             }
@@ -313,10 +320,14 @@ private int id;
             switch (corner)
             {
                 default:
-                case 0: return locX[id] > 150 || locY[id] > 150;
-                case 1: return locX[id] < 850 || locY[id] > 150;
-                case 2: return locX[id] < 850 || locY[id] < 850;
-                case 3: return locX[id] > 150 || locY[id] < 850;
+                case 0:
+                    return locX[id] > 150 || locY[id] > 150;
+                case 1:
+                    return locX[id] < 850 || locY[id] > 150;
+                case 2:
+                    return locX[id] < 850 || locY[id] < 850;
+                case 3:
+                    return locX[id] > 150 || locY[id] < 850;
             }
         }
 
@@ -325,10 +336,14 @@ private int id;
             switch (corner)
             {
                 default:
-                case 0: return locY[id] > 150;
-                case 1: return locX[id] < 850;
-                case 2: return locY[id] < 850;
-                case 3: return locX[id] > 150;
+                case 0:
+                    return locY[id] > 150;
+                case 1:
+                    return locX[id] < 850;
+                case 2:
+                    return locY[id] < 850;
+                case 3:
+                    return locX[id] > 150;
             }
         }
     }

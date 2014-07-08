@@ -2,20 +2,20 @@
 {
     public class Follower : SDK.Robot
     {
-        public override string Name { get { return "Follower"; } }
-
-        public override void Main()
+        public override void Init()
         {
-            while (true)
-            {
-                int angle, range;
-                bool targetFound = FindTarget(10, out angle, out range);
-                if (targetFound)
-                    SDK.Drive(angle, 40);
-                else
-                    SDK.Drive(0, 40);
-            }
         }
+
+        public override void Step()
+        {
+            int angle, range;
+            bool targetFound = FindTarget(10, out angle, out range);
+            if (targetFound)
+                SDK.Drive(angle, 40);
+            else
+                SDK.Drive(0, 40);
+        }
+
         private bool FindTarget(int resolution, out int angle, out int range)
         {
             angle = 0;

@@ -2,14 +2,11 @@
 
 // TODO: 
 //  when approching border/corner stop driving randomly and go opposite direction
-//  use IsFriendlyTarget to avoid shooting to friend and get a new target --> new FindTarget method
-
+//  when switching target, reset speed
 namespace Robots
 {
     public class SinaC : Robot
     {
-        public override string Name { get { return "SinaC"; } }
-
         public static readonly double FriendRangeSquared = 80*80;
 
         // Shared infos between team members
@@ -29,13 +26,15 @@ namespace Robots
         double _previousSpeedX;
         double _previousSpeedY;
 
+        private int _arenaSize;
         private int _missileSpeed;
         private int _maxExplosionRange;
         private int _maxExplosionRangePlusCannonRange;
 
-        public override void Main()
+        public override void Init()
         {
             _previousTime = SDK.Time;
+            _arenaSize = SDK.Parameters["ArenaSize"];
             _missileSpeed = SDK.Parameters["MissileSpeed"];
             _maxExplosionRange = SDK.Parameters["MaxExplosionRange"];
             _maxExplosionRangePlusCannonRange = SDK.Parameters["MaxExplosionRange"] + SDK.Parameters["MaxCannonRange"];
@@ -45,60 +44,201 @@ namespace Robots
 
             UpdateSharedInformations(SDK.LocX, SDK.LocY, SDK.Damage);
 
-            DriveRandomly();
-            FireOnTarget();
+            //DriveRandomly();
+            FireOnEnemy();
             _previousSuccessfulShootTime = SDK.Time;
+        }
 
-            while (true)
+        public override void Step()
+        {
+            // Update shared info
+            UpdateSharedInformations(SDK.LocX, SDK.LocY, SDK.Damage);
+
+            double currentTime = SDK.Time;
+
+            double elapsedTime = currentTime - _previousTime;
+            double elapsedShootingTime = currentTime - _previousSuccessfulShootTime;
+
+            if (elapsedShootingTime > 1) // 1 second since last successfull shoot
             {
-                // Update shared info
-                UpdateSharedInformations(SDK.LocX, SDK.LocY, SDK.Damage);
+                // Fire on target
+                bool success = FireOnEnemyInterpolated(elapsedShootingTime);
 
-                double currentTime = SDK.Time;
+                //
+                if (success)
+                    _previousSuccessfulShootTime = SDK.Time;
+            }
 
-                double elapsedTime = currentTime - _previousTime;
-                double elapsedShootingTime = currentTime - _previousSuccessfulShootTime;
+            if (elapsedTime > 1) // 1 second since last move
+            {
+                System.Diagnostics.Debug.WriteLine("LOCATION {0} : {1},{2}", _id, SDK.LocX, SDK.LocY);
 
-                if (elapsedShootingTime > 1) // 1 second since last successfull shoot
-                {
-                    // Fire on target
-                    bool success = FireOnTargetInterpolated(elapsedShootingTime);
+                // Change direction
+                //DriveRandomly();
 
-                    //
-                    if (success)
-                        _previousSuccessfulShootTime = SDK.Time;
-                }
-
-                if (elapsedTime > 1) // 1 second since last move
-                {
-                    // Change direction
-                    DriveRandomly();
-
-                    //
-                    _previousTime = currentTime;
-                }
+                //
+                _previousTime = currentTime;
             }
         }
 
-        private void UpdateSharedInformations(int locX, int locY, int damage)
+        //***************************************************************
+        // NEW VERSION
+        //***************************************************************
+        private void FireOnEnemy()
         {
-            TeamLocX[_id] = locX;
-            TeamLocY[_id] = locY;
-            TeamDamage[_id] = damage;
+            // Search nearest enemy
+            int enemyAngle, enemyRange;
+            double enemyX, enemyY;
+            bool found = FindNearestEnemy(0, out enemyAngle, out enemyRange, out enemyX, out enemyY);
+
+            if (found)
+            {
+                if (enemyRange < _maxExplosionRangePlusCannonRange) // Don't fire if too far
+                    SDK.Cannon(enemyAngle, enemyRange);
+            }
         }
 
-        private bool IsFriendlyTarget(double locX, double locY)
+        private bool FireOnEnemyInterpolated(double elapsedTime)
         {
-            if (_teamCount > 1)
-                for(int i = 0; i < _teamCount; i++)
-                    if (i != _id)
+            bool success = false;
+            // Search nearest enemy
+            int enemyAngle, enemyRange;
+            double enemyX, enemyY;
+            bool found = FindNearestEnemy(0, out enemyAngle, out enemyRange, out enemyX, out enemyY);
+            
+            if (found)
+            {
+                System.Diagnostics.Debug.WriteLine("Nearest enemy of {0}: A{1} R{2} {3:0.0000},{4:0.0000}", _id, enemyAngle, enemyRange, enemyX, enemyY);
+
+                double currentSpeedX, currentSpeedY;
+                ComputeSpeed(elapsedTime, _previousEnemyX, _previousEnemyY, enemyX, enemyY, out currentSpeedX, out currentSpeedY);
+
+                //System.Diagnostics.Debug.WriteLine("TICK:{0:0.00} | Enemy position: {1:0.0000}, {2:0.0000} Speed : {3:0.0000}, {4:0.0000} | range {5} angle {6}", SDK.Time, currentEnemyX, currentEnemyY, currentSpeedX, currentSpeedY, currentRange, currentAngle);
+
+                if (_previousRange != 0 && _previousAngle != 0) // Only fire when we have valid information
+                {
+                    int cannonAngle, cannonRange;
+                    ComputeCannonInfo(SDK.LocX, SDK.LocY, enemyX, enemyY, currentSpeedX, currentSpeedY, out cannonAngle, out cannonRange);
+
+                    if (cannonRange > _maxExplosionRange && cannonRange < _maxExplosionRangePlusCannonRange) // Don't fire if too far
                     {
-                        double dx = locX - TeamLocX[i];
-                        double dy = locY - TeamLocY[i];
-                        if (dx*dx + dy*dy < FriendRangeSquared)
-                            return true;
+                        success = SDK.Cannon(cannonAngle, cannonRange) != 0;
                     }
+                }
+                else // If no information on speed, fire at current enemy location
+                {
+                    if (enemyRange > _maxExplosionRange && enemyRange < _maxExplosionRangePlusCannonRange) // Don't fire if too far or too near
+                    {
+                        success = SDK.Cannon(enemyAngle, enemyRange) != 0;
+                    }
+                }
+
+                _previousAngle = enemyAngle;
+                _previousRange = enemyRange;
+                _previousEnemyX = enemyX;
+                _previousEnemyY = enemyY;
+                _previousSpeedX = currentSpeedX;
+                _previousSpeedY = currentSpeedY;
+            }
+
+            //
+            return success;
+        }
+
+        private bool FindNearestEnemy(int minDistance, out int angle, out int range, out double enemyX, out double enemyY)
+        {
+            enemyX = 0;
+            enemyY = 0;
+            // Scan
+            int startAngle = 0;
+            int endAngle = 360;
+            int nearestDistance = 0;
+            int nearestAngle = 0;
+            for (int resAngle = 16; resAngle >= 1; resAngle /= 2)
+            {
+                bool found = false;
+                nearestDistance = 2 * _arenaSize;
+                for (angle = startAngle; angle <= endAngle; angle += resAngle)
+                {
+                    range = SDK.Scan(angle, resAngle);
+                    if (range > minDistance + _maxExplosionRange && range < nearestDistance)
+                    //if (range > 0)
+                    {
+                        nearestDistance = range;
+                        nearestAngle = angle;
+                        found = true;
+                    }
+                }
+                if (!found)
+                    break;
+                startAngle = nearestAngle - resAngle;
+                endAngle = startAngle + 2 * resAngle;
+            }
+            // Compute position
+            range = nearestDistance;
+            angle = nearestAngle;
+            if (range > 0)
+            {
+                ComputePoint(SDK.LocX, SDK.LocY, range, angle, out enemyX, out enemyY);
+                if (IsFriendlyTarget(enemyX, enemyY))
+                    return FindNearestEnemy(range, out angle, out range, out enemyX, out enemyY);
+                return true;
+            }
             return false;
+        }
+
+        //***************************************************************
+        // OLD VERSION
+        //***************************************************************
+
+        public void InitOld()
+        {
+            _previousTime = SDK.Time;
+            _arenaSize = SDK.Parameters["ArenaSize"];
+            _missileSpeed = SDK.Parameters["MissileSpeed"];
+            _maxExplosionRange = SDK.Parameters["MaxExplosionRange"];
+            _maxExplosionRangePlusCannonRange = SDK.Parameters["MaxExplosionRange"] + SDK.Parameters["MaxCannonRange"];
+
+            _teamCount = SDK.FriendsCount;
+            _id = SDK.Id;
+
+            UpdateSharedInformations(SDK.LocX, SDK.LocY, SDK.Damage);
+
+            //DriveRandomly();
+            FireOnTarget();
+            _previousSuccessfulShootTime = SDK.Time;
+        }
+
+        public void Step2Old()
+        {
+            // Update shared info
+            UpdateSharedInformations(SDK.LocX, SDK.LocY, SDK.Damage);
+
+            double currentTime = SDK.Time;
+
+            double elapsedTime = currentTime - _previousTime;
+            double elapsedShootingTime = currentTime - _previousSuccessfulShootTime;
+
+            if (elapsedShootingTime > 1) // 1 second since last successfull shoot
+            {
+                // Fire on target
+                bool success = FireOnTargetInterpolated(elapsedShootingTime);
+
+                //
+                if (success)
+                    _previousSuccessfulShootTime = SDK.Time;
+            }
+
+            if (elapsedTime > 1) // 1 second since last move
+            {
+                System.Diagnostics.Debug.WriteLine("LOCATION {0} : {1},{2}", _id, SDK.LocX, SDK.LocY);
+
+                // Change direction
+                //DriveRandomly();
+
+                //
+                _previousTime = currentTime;
+            }
         }
 
         private void FireOnTarget()
@@ -165,6 +305,11 @@ namespace Robots
         // TODO: store previous angle
         private bool FindTarget(int resolution, out int angle, out int range)
         {
+            //int enemyAngle, enemyRange;
+            //double enemyX, enemyY;
+            //bool found = FindNearestEnemy(0, out enemyAngle, out enemyRange, out enemyX, out enemyY);
+            //System.Diagnostics.Debug.WriteLine("Nearest enemy of {0}: A{1} R{2} {3:0.0000},{4:0.0000} found:{5}", _id, enemyAngle, enemyRange, enemyX, enemyY, found);
+
             angle = 0;
             range = 0;
             for (int step = 0; step < 360; step += resolution)
@@ -173,14 +318,45 @@ namespace Robots
                 if (r > 0)
                 {
                     double targetX, targetY;
-                    ComputePoint(SDK.LocX, SDK.LocY, range, step, out targetX, out targetY);
+                    ComputePoint(SDK.LocX, SDK.LocY, r, step, out targetX, out targetY);
                     if (!IsFriendlyTarget(targetX, targetY))
                     {
                         range = r;
                         angle = step;
+                        //System.Diagnostics.Debug.WriteLine("Enemy of {0}: A{1} R{2} {3:0.0000},{4:0.0000}", _id, angle, range, targetX, targetY);
+
+                        //if (SDK.Abs(range-enemyRange) > 5 && SDK.Abs(angle - enemyAngle) > 5)
+                        //    System.Diagnostics.Debug.WriteLine("***********************************************************");
                         return true;
                     }
                 }
+            }
+            return false;
+        }
+
+        // HELPERS
+
+        private void UpdateSharedInformations(int locX, int locY, int damage)
+        {
+            TeamLocX[_id] = locX;
+            TeamLocY[_id] = locY;
+            TeamDamage[_id] = damage;
+        }
+
+        private bool IsFriendlyTarget(double locX, double locY)
+        {
+            if (_teamCount > 1)
+            {
+                //System.Diagnostics.Debug.WriteLine("CHECKING IF FRIENDLY TARGET {0} - {1}, {2}", _id, locX, locY);
+                for (int i = 0; i < _teamCount; i++)
+                    if (i != _id)
+                    {
+                        //System.Diagnostics.Debug.WriteLine("TEAM MEMBER {0} : {1},{2}", i, TeamLocX[i], TeamLocY[i]);
+                        double dx = locX - TeamLocX[i];
+                        double dy = locY - TeamLocY[i];
+                        if (dx * dx + dy * dy < FriendRangeSquared)
+                            return true;
+                    }
             }
             return false;
         }

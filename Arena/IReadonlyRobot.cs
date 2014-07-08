@@ -4,7 +4,7 @@
     {
         int Team { get; }
         int Id { get; }
-        string Name { get; }
+        string TeamName { get; }
 
         RobotStates State { get; }
 

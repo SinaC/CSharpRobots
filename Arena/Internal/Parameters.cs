@@ -22,35 +22,35 @@ namespace Arena.Internal
         #endregion
 
         // Arena
-        public static readonly int StepDelay = 15; // !!! this delay is not guaranteed by windows when using System.Timers.Timer (not used anymore), we have to compute real elapsed delay between 2 steps (http://stackoverflow.com/questions/3744032/why-are-net-timers-limited-to-15-ms-resolution)
-        public static readonly int ArenaSize = 1000;
-        public static readonly double CollisionDistance = 1;
-        public static readonly int CollisionDamage = 2;
-        public static readonly int ExplosionDisplayDelay = 500;
+        public const int StepDelay = 15;
+        public const int ArenaSize = 1000;
+        public const double CollisionDistance = 1;
+        public const int CollisionDamage = 2;
+        public const int ExplosionDisplayDelay = 500;
         // Missile
-        public static readonly int MissileSpeed = 300; // in m/s
+        public const int MissileSpeed = 300; // in m/s
         // Robot
-        public static readonly double TrigonometricBias = 100000;
-        public static readonly double MaxSpeed = 30; // in m/s
-        public static readonly int MaxDamage = 100;
-        public static readonly int MaxResolution = 20; // in degrees
-        public static readonly int MaxCannonRange = 700; // in meters
-        public static readonly int MaxAcceleration = 5; // acceleration factor in m/s
-        public static readonly int MaxTurnSpeed = 50; // maximum speed for direction change
+        public const double TrigonometricBias = 100000;
+        public const double MaxSpeed = 30; // in m/s
+        public const int MaxDamage = 10000;
+        public const int MaxResolution = 20; // in degrees
+        public const int MaxCannonRange = 700; // in meters
+        public const int MaxAcceleration = 5; // acceleration factor in m/s
+        public const int MaxTurnSpeed = 50; // maximum speed for direction change
 
         private ParametersSingleton()
         {
             _parameters = new Dictionary<string, int>
                 {
-                    {"ArenaSize", 1000},
-                    {"CollisionDamage", 2},
-                    {"MissileSpeed", 300},
-                    {"MaxSpeed", 30},
-                    {"MaxDamage", 100},
-                    {"MaxResolution", 20},
-                    {"MaxCannonRange", 700},
-                    {"MaxAcceleration", 5},
-                    {"MaxTurnSpeed", 50},
+                    {"ArenaSize", ArenaSize},
+                    {"CollisionDamage", CollisionDamage},
+                    {"MissileSpeed", MissileSpeed},
+                    {"MaxSpeed", (int)MaxSpeed},
+                    {"MaxDamage", MaxDamage},
+                    {"MaxResolution", MaxResolution},
+                    {"MaxCannonRange", MaxCannonRange},
+                    {"MaxAcceleration", MaxAcceleration},
+                    {"MaxTurnSpeed", MaxTurnSpeed},
                     {"MaxExplosionRange", 40}
                 };
         }

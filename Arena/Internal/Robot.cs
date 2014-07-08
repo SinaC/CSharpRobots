@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Common.Clock;
 using SDK;
-
-// TODO: 
-// Handle speed/acceleration in a different way, use m/s instead of %age of MaxSpeed   SDK.Speed will return a percentage based on computed speed
 
 namespace Arena.Internal
 {
     internal class Robot : ISDKRobot, IReadonlyRobot
     {
         private CancellationTokenSource _cancellationTokenSource;
+        private readonly ManualResetEvent _stopEvent;
         private Task _mainTask;
 
         private Arena _arena;
@@ -37,14 +36,17 @@ namespace Arena.Internal
 
         public Robot()
         {
+            _stopEvent = new ManualResetEvent(false);
+
             State = RobotStates.Created;
         }
 
-        public void Initialize(SDK.Robot userRobot, Arena arena, int id, int team, int locX, int locY)
+        public void Initialize(SDK.Robot userRobot, Arena arena, string teamName, int id, int team, int locX, int locY)
         {
             _userRobot = userRobot;
             _userRobot.SDK = this;
             _arena = arena;
+            TeamName = teamName;
             Id = id;
             Team = team;
             RawLocX = locX;
@@ -61,14 +63,15 @@ namespace Arena.Internal
 
             State = RobotStates.Initialized;
 
-            System.Diagnostics.Debug.WriteLine("Robot {0} | {1} initialized.", Id, Team);
+            Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} initialized.", Id, Team);
         }
 
-        public void Initialize(SDK.Robot userRobot, Arena arena, int id, int team, int locX, int locY, int heading, int speed)
+        public void Initialize(SDK.Robot userRobot, Arena arena, string teamName, int id, int team, int locX, int locY, int heading, int speed)
         {
             _userRobot = userRobot;
             _userRobot.SDK = this;
             _arena = arena;
+            TeamName = teamName;
             Id = id;
             Team = team;
             RawLocX = locX;
@@ -85,24 +88,26 @@ namespace Arena.Internal
 
             State = RobotStates.Initialized;
 
-            System.Diagnostics.Debug.WriteLine("Robot {0} | {1} initialized.", Id, Team);
+            Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} initialized.", Id, Team);
         }
 
         public void Start(Tick matchStart)
         {
             try
             {
+                _stopEvent.Reset();
+
                 _matchStart = matchStart;
                 State = RobotStates.Starting;
 
                 _cancellationTokenSource = new CancellationTokenSource();
                 _mainTask = Task.Factory.StartNew(MainLoop, _cancellationTokenSource.Token);
 
-                System.Diagnostics.Debug.WriteLine("Robot {0} | {1} started.", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} started.", Id, Team);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("Exception while starting Robot {0} | {1}. {2}", Id, Team, ex);
+                Common.Log.WriteLine(Common.Log.LogLevels.Error, "Exception while starting Robot {0} | {1}. {2}", Id, Team, ex);
             }
         }
 
@@ -114,23 +119,24 @@ namespace Arena.Internal
 
             try
             {
-                System.Diagnostics.Debug.WriteLine("Robot {0} | {1} stopping.", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} stopping.", Id, Team);
                 State = RobotStates.Stopping;
 
-                _cancellationTokenSource.Cancel();
+                //_cancellationTokenSource.Cancel();
+                _stopEvent.Set();
 
-                Task.WaitAll(_mainTask);
+                _mainTask.Wait(1000);
             }
             catch (AggregateException ex)
             {
                 foreach (Exception inner in ex.InnerExceptions)
                 {
                     if (inner is TaskCanceledException)
-                        System.Diagnostics.Debug.WriteLine("Robot {0} | {1} cancelled successfully.", Id, Team);
+                        Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} cancelled successfully.", Id, Team);
                     else if (inner is ThreadAbortException)
-                        System.Diagnostics.Debug.WriteLine("Robot {0} | {1} aborted successfully.", Id, Team);
+                        Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} aborted successfully.", Id, Team);
                     else
-                        System.Diagnostics.Debug.WriteLine("Exception while stopping Robot {0} | {1}. {2}", Id, Team, ex);
+                        Common.Log.WriteLine(Common.Log.LogLevels.Info, "Exception while stopping Robot {0} | {1}. {2}", Id, Team, ex);
                 }
             }
             finally
@@ -138,7 +144,7 @@ namespace Arena.Internal
                 State = RobotStates.Stopped;
                 _mainTask = null;
 
-                System.Diagnostics.Debug.WriteLine("Robot {0} | {1} stopped.", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} stopped.", Id, Team);
             }
         }
 
@@ -149,7 +155,7 @@ namespace Arena.Internal
             {
                 if (Speed > _desiredSpeed) // Slowing
                 {
-                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowing. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} slowing. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
 
                     _acceleration -= ((ParametersSingleton.MaxAcceleration*realStepTime)/1000.0)*(100.0/ParametersSingleton.MaxSpeed);
                     if (_acceleration < _desiredSpeed)
@@ -160,11 +166,11 @@ namespace Arena.Internal
                     else
                         Speed = (int)_acceleration;
 
-                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} slowed. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} slowed. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
                 }
                 else // Accelerating
                 {
-                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerating. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} accelerating. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
 
                     _acceleration += ((ParametersSingleton.MaxAcceleration*realStepTime)/1000.0)*(100.0/ParametersSingleton.MaxSpeed);
                     if (_acceleration > _desiredSpeed)
@@ -175,7 +181,7 @@ namespace Arena.Internal
                     else
                         Speed = (int)_acceleration;
 
-                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} accelerated. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} accelerated. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
                 }
             }
         }
@@ -185,7 +191,7 @@ namespace Arena.Internal
             // Update heading, allow change below a certain speed
             if (Heading != _desiredHeading)
             {
-                //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} updating heading. Heading {2} Desired Heading {3} RawLocX {4} RawLocY {5} Speed {6}", Id, Team, Heading, _desiredHeading, RawLocX, RawLocY, Speed);
+                //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} updating heading. Heading {2} Desired Heading {3} RawLocX {4} RawLocY {5} Speed {6}", Id, Team, Heading, _desiredHeading, RawLocX, RawLocY, Speed);
 
                 if (Speed <= ParametersSingleton.MaxTurnSpeed)
                 {
@@ -194,11 +200,11 @@ namespace Arena.Internal
                     _originX = RawLocX;
                     _originY = RawLocY;
 
-                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} heading updated. Heading {2} Desired Heading {3} OriginX {4} OriginY {5} Speed {6}", Id, Team, Heading, _desiredHeading, _originX, _originY, Speed);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} heading updated. Heading {2} Desired Heading {3} OriginX {4} OriginY {5} Speed {6}", Id, Team, Heading, _desiredHeading, _originX, _originY, Speed);
                 }
                 else
                 {
-                    //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} moving too fast, cannot update Heading", Id, Team);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} moving too fast, cannot update Heading", Id, Team);
                     _desiredSpeed = 0;
                 }
             }
@@ -217,18 +223,18 @@ namespace Arena.Internal
                 RawLocX = newX;
                 RawLocY = newY;
 
-                //System.Diagnostics.Debug.WriteLine("Robot {0} | {1} location updated. CurrentDistance {2} OriginX {3} OriginY {4} RawLocX {5} RawLocY {6} Heading {7} Speed {8}", Id, Team, _currentDistance, _originX, _originY, RawLocX, RawLocY, Heading, Speed);
+                //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} location updated. CurrentDistance {2} OriginX {3} OriginY {4} RawLocX {5} RawLocY {6} Heading {7} Speed {8}", Id, Team, _currentDistance, _originX, _originY, RawLocX, RawLocY, Heading, Speed);
             }
         }
 
         public void TakeDamage(int damage)
         {
             Damage += damage;
-            System.Diagnostics.Debug.WriteLine("Robot {0} | {1} takes {2} damage => {3} total damage", Id, Team, damage, Damage);
+            Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} takes {2} damage => {3} total damage", Id, Team, damage, Damage);
             if (Damage >= ParametersSingleton.MaxDamage)
             {
                 State = RobotStates.Destroyed;
-                System.Diagnostics.Debug.WriteLine("Robot {0} | {1} destroyed", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} destroyed", Id, Team);
             }
         }
 
@@ -288,7 +294,7 @@ namespace Arena.Internal
 
         public int Team { get; private set; }
 
-        public string Name { get { return _userRobot.Name; } }
+        public string TeamName { get; private set; }
 
         public int Heading { get; private set; }
 
@@ -313,8 +319,8 @@ namespace Arena.Internal
 
         public int Cannon(int degrees, int range)
         {
-            Thread.Sleep(1); // give time to others
-            //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Cannon {2} {3}.", Id, Team, degrees, range);
+            // not needed anymore Thread.Sleep(1); // give time to others
+            //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}. Cannon {2} {3}.", Id, Team, degrees, range);
             if (_damage > 100) // too damaged
                 return 0;
 
@@ -324,7 +330,7 @@ namespace Arena.Internal
             if (elapsed < 1) // reload
                 return 0;
 
-            //System.Diagnostics.Debug.WriteLine("Robot {0}[{1}] shooting interval {2}", Name, Id, elapsed);
+            //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] shooting interval {2}", TeamName, Id, elapsed);
             CannonCount++;
             LastMissileLaunchTick = Tick.Now;
             int result = _arena.Cannon(this, LastMissileLaunchTick, degrees, range);
@@ -333,8 +339,8 @@ namespace Arena.Internal
 
         public void Drive(int degrees, int speed)
         {
-            Thread.Sleep(1); // give time to others
-            //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Drive {2} {3}.", Id, Team, degrees, speed);
+            // not needed anymore Thread.Sleep(1); // give time to others
+            //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}. Drive {2} {3}.", Id, Team, degrees, speed);
 
             degrees = FixDegrees(degrees);
             speed = FixSpeed(speed);
@@ -346,8 +352,8 @@ namespace Arena.Internal
 
         public int Scan(int degrees, int resolution)
         {
-            Thread.Sleep(1); // give time to others
-            //System.Diagnostics.Debug.WriteLine("Robot {0} | {1}. Scan {2} {3}.", Id, Team, degrees, resolution);
+            // not needed anymore Thread.Sleep(1); // give time to others
+            //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}. Scan {2} {3}.", Id, Team, degrees, resolution);
             if (_damage > 100) // too damaged
                 return 0;
 
@@ -461,23 +467,48 @@ namespace Arena.Internal
                 // So, we have to abort the thread even if it's not recommended
                 using (_cancellationTokenSource.Token.Register(Thread.CurrentThread.Abort))
                 {
+                    Stopwatch sw = new Stopwatch();
+
+                    _userRobot.Init();
+
                     State = RobotStates.Running;
-                    _userRobot.Main();
+                    //_userRobot.Main();
+                    while(true)
+                    {
+                        //
+                        sw.Reset();
+                        sw.Start();
+                        //
+                        _userRobot.Step();
+                        //
+                        sw.Stop();
+                        double elapsed = sw.ElapsedMilliseconds;
+                        int sleepTime = (int)(ParametersSingleton.StepDelay - elapsed);
+                        if (sleepTime < 0)
+                            sleepTime = 1;
+                        //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Elapsed {0:0.0000} -> Sleep {1}", elapsed, sleepTime);
+                        bool stopAsked = _stopEvent.WaitOne(sleepTime);
+                        if (stopAsked)
+                        {
+                            Common.Log.WriteLine(Common.Log.LogLevels.Info, "Stop event received. Stopping main loop");
+                            break;
+                        }
+                    }
                 }
             }
             catch (ThreadAbortException)
             {
-                System.Diagnostics.Debug.WriteLine("ThreadAbortException with Robot {0} | {1}.", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "ThreadAbortException with Robot {0} | {1}.", Id, Team);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("Exception with Robot {0} | {1}. {2}", Id, Team, ex);
+                Common.Log.WriteLine(Common.Log.LogLevels.Error, "Exception with Robot {0} | {1}. {2}", Id, Team, ex);
             }
             finally
             {
                 State = RobotStates.Stopped;
 
-                System.Diagnostics.Debug.WriteLine("Robot {0} | {1} stopped.", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} stopped.", Id, Team);
             }
         }
         

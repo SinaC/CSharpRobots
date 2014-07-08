@@ -2,11 +2,20 @@
 
 namespace Robots
 {
+    // TODO: convert
     public class Counter : Robot
     {
-        public override string Name { get { return "Counter"; } }
+        public override void Init()
+        {
+            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
+        }
 
-        public override void Main()
+        public override void Step()
+        {
+            // NOP
+        }
+
+        public void Main()
         {
             const int res = 1;
             int d = SDK.Damage;

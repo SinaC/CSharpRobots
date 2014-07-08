@@ -1,11 +1,17 @@
 ﻿namespace Robots
 {
+    // TODO: convert
     // Found on JJRobots
     public class Maruko4 : SDK.Robot
     {
-        public override string Name
+        public override void Init()
         {
-            get { return "Maruko4"; }
+            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
+        }
+
+        public override void Step()
+        {
+            // NOP
         }
 
         private const int MSPD = 300;
@@ -28,7 +34,7 @@
         private static int[][] friends = {new int[2], new int[2], new int[2], new int[2], new int[2], new int[2], new int[2], new int[2]};
         private static int totalfriends;
 
-        public override void Main()
+        public void Main()
         {
             this.myid = SDK.Id;
             int i = this.myid;

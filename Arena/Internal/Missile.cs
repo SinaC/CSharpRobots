@@ -1,4 +1,5 @@
-﻿using Common.Clock;
+﻿using Common;
+using Common.Clock;
 
 namespace Arena.Internal
 {
@@ -74,7 +75,7 @@ namespace Arena.Internal
             LocX = newLocX;
             LocY = newLocY;
 
-            //System.Diagnostics.Debug.WriteLine("Missile {0} location updated. CurrentDistance {1} LaunchX {2} LaunchY {3} LocX {4} LocY {5} Heading {6}", Id, CurrentDistance, LaunchLocX, LaunchLocY, LocX, LocY, Heading);
+            //Log.WriteLine(Log.LogLevels.Debug, "Missile {0} location updated. CurrentDistance {1} LaunchX {2} LaunchY {3} LocX {4} LocY {5} Heading {6}", Id, CurrentDistance, LaunchLocX, LaunchLocY, LocX, LocY, Heading);
         }
 
         public void TargetReached()
@@ -85,7 +86,7 @@ namespace Arena.Internal
             double diffY = LocY - LaunchLocY;
             double distance = System.Math.Sqrt(diffX*diffX + diffY*diffY);
             double speed = distance/elapsed*1000.0; // in m/s
-            System.Diagnostics.Debug.WriteLine("Missile {0} target reached. Speed {1} Distance {2} Range {3}", Id, speed, distance, Range);
+            Log.WriteLine(Log.LogLevels.Debug, "Missile {0} target reached. Speed {1} Distance {2} Range {3}", Id, speed, distance, Range);
 
             State = MissileStates.Exploding;
         }

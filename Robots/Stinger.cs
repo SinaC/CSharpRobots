@@ -1,11 +1,17 @@
 ﻿namespace Robots
 {
+    // TODO: convert
     //JJRobots (c) 2000 L.Boselli - boselli@uno.it
     public class Stinger : SDK.Robot
     {
-        public override string Name
+        public override void Init()
         {
-            get { return "Stinger"; }
+            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
+        }
+
+        public override void Step()
+        {
+            // NOP
         }
 
         private static int counter;
@@ -27,7 +33,7 @@
         private int drive;
         private int id;
 
-        public override void Main()
+        public void Main()
         {
             if ((id = SDK.Id) == 0)
             {

@@ -2,12 +2,21 @@
 
 namespace Robots
 {
+    // TODO: convert
     // Rabbit runs around the field, SDK.Randomly and never fires; use as a target
     public class Rabbit : Robot
     {
-        public override string Name { get { return "Rabbit"; } }
+        public override void Init()
+        {
+            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
+        }
 
-        public override void Main()
+        public override void Step()
+        {
+            // NOP
+        }
+
+        public void Main()
         {
             while (true)
             {

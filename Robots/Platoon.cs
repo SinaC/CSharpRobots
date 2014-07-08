@@ -6,29 +6,35 @@ using System.Threading.Tasks;
 
 namespace Robots
 {
+    // TODO: convert
     //JJRobots (c) 2000 L.Boselli - boselli@uno.it
     public class Platoon : SDK.Robot
     {
-        public override string Name
+        public override void Init()
         {
-            get { return "Platoon"; }
+            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
+        }
+
+        public override void Step()
+        {
+            // NOP
         }
 
         private static int count;
-private static int[] cornerX = {50,950,950,50};
-private static int[] cornerY = {50,50,950,950};
-private static int targetX = 500;
-private static int targetY = 500;
-private static int[] locX = new int[8];
-private static int[] locY = new int[8];
-private static int corner1;
+        private static int[] cornerX = {50, 950, 950, 50};
+        private static int[] cornerY = {50, 50, 950, 950};
+        private static int targetX = 500;
+        private static int targetY = 500;
+        private static int[] locX = new int[8];
+        private static int[] locY = new int[8];
+        private static int corner1;
 
-private int nCorner;
-private int scan;
-private int id;
+        private int nCorner;
+        private int scan;
+        private int id;
 
 
-        public override void Main()
+        public void Main()
         {
             if ((id = SDK.Id) == 0)
             {
@@ -49,17 +55,25 @@ private int id;
             }
             else
             {
-                angle = SDK.ATan(dy * 100000 / dx);
+                angle = SDK.ATan(dy*100000/dx);
             }
             if (dx < 0) angle += 180;
             SDK.Drive(angle, 100);
             switch (nCorner)
             {
                 default:
-                case 0: while (locX[id] > 150 || locY[id] > 150) fire2(); break;
-                case 1: while (locX[id] < 850 || locY[id] > 150) fire2(); break;
-                case 2: while (locX[id] < 850 || locY[id] < 850) fire2(); break;
-                case 3: while (locX[id] > 150 || locY[id] < 850) fire2(); break;
+                case 0:
+                    while (locX[id] > 150 || locY[id] > 150) fire2();
+                    break;
+                case 1:
+                    while (locX[id] < 850 || locY[id] > 150) fire2();
+                    break;
+                case 2:
+                    while (locX[id] < 850 || locY[id] < 850) fire2();
+                    break;
+                case 3:
+                    while (locX[id] > 150 || locY[id] < 850) fire2();
+                    break;
             }
             do
             {
@@ -74,17 +88,25 @@ private int id;
                 }
                 else
                 {
-                    angle = SDK.ATan(dy * 100000 / dx);
+                    angle = SDK.ATan(dy*100000/dx);
                 }
                 if (dx < 0) angle += 180;
                 SDK.Drive(angle, 100);
                 switch (nCorner)
                 {
                     default:
-                    case 0: while (locY[id] > 150) fire1(); break;
-                    case 1: while (locX[id] < 850) fire1(); break;
-                    case 2: while (locY[id] < 850) fire1(); break;
-                    case 3: while (locX[id] > 150) fire1(); break;
+                    case 0:
+                        while (locY[id] > 150) fire1();
+                        break;
+                    case 1:
+                        while (locX[id] < 850) fire1();
+                        break;
+                    case 2:
+                        while (locY[id] < 850) fire1();
+                        break;
+                    case 3:
+                        while (locX[id] > 150) fire1();
+                        break;
                 }
             } while (true);
         }
@@ -94,10 +116,18 @@ private int id;
             switch (nCorner)
             {
                 default:
-                case 0: if (++scan > 470 || scan < 240) scan = 250; break;
-                case 1: if (++scan > 200 || scan < -30) scan = -20; break;
-                case 2: if (++scan > 290 || scan < 60) scan = 70; break;
-                case 3: if (++scan > 380 || scan < 150) scan = 160; break;
+                case 0:
+                    if (++scan > 470 || scan < 240) scan = 250;
+                    break;
+                case 1:
+                    if (++scan > 200 || scan < -30) scan = -20;
+                    break;
+                case 2:
+                    if (++scan > 290 || scan < 60) scan = 70;
+                    break;
+                case 3:
+                    if (++scan > 380 || scan < 150) scan = 160;
+                    break;
             }
             fire();
         }
@@ -118,15 +148,15 @@ private int id;
                 if (count > 1)
                 {
                     bool shot = true;
-                    int shotX = locX[id] + range * SDK.Cos(scan) / 100000;
-                    int shotY = locY[id] + range * SDK.Sin(scan) / 100000;
+                    int shotX = locX[id] + range*SDK.Cos(scan)/100000;
+                    int shotY = locY[id] + range*SDK.Sin(scan)/100000;
                     for (int ct = 0; ct < count; ct++)
                     {
                         if (ct != id)
                         {
                             int dx = shotX - locX[ct];
                             int dy = shotY - locY[ct];
-                            if (dx * dx + dy * dy < 1600)
+                            if (dx*dx + dy*dy < 1600)
                             {
                                 shot = false;
                                 break;
@@ -144,7 +174,7 @@ private int id;
                     {
                         int dx = targetX - locX[id];
                         int dy = targetY - locY[id];
-                        int dist2 = dx * dx + dy * dy;
+                        int dist2 = dx*dx + dy*dy;
                         if (dist2 > 1600 && dist2 <= 547600)
                         {
                             int angle;
@@ -154,7 +184,7 @@ private int id;
                             }
                             else
                             {
-                                angle = SDK.ATan(dy * 100000 / dx);
+                                angle = SDK.ATan(dy*100000/dx);
                                 if (dx < 0) angle += 180;
                             }
                             SDK.Cannon(angle, SDK.Sqrt(dist2));

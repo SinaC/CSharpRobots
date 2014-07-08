@@ -2,9 +2,18 @@
 
 namespace Robots
 {
+    // TODO: convert
     public class Sniper : Robot
     {
-        public override string Name { get { return "Sniper"; } }
+        public override void Init()
+        {
+            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
+        }
+
+        public override void Step()
+        {
+            // NOP
+        }
 
         int _corner;
         int _c1X, _c1Y;
@@ -15,7 +24,7 @@ namespace Robots
         int _sc;
         int _d;
 
-        public override void Main()
+        public void Main()
         {
             _c1X = 10; _c1Y = 10; _s1 = 0;
             _c2X = 10; _c2Y = 990; _s2 = 270;

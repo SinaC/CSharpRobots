@@ -1,18 +1,18 @@
-﻿using System.Threading;
-using SDK;
+﻿using SDK;
 
 namespace Robots
 {
     // Target just sits there
     public class Target : Robot
     {
-        public override string Name { get { return "Target"; } }
-
-        public override void Main()
+        public override void Init()
         {
             System.Diagnostics.Debug.WriteLine("Target: my position {0} {1}", SDK.LocX, SDK.LocY);
-            while (true)
-                Thread.Sleep(10);
+        }
+
+        public override void Step()
+        {
+            // NOP
         }
     }
 }

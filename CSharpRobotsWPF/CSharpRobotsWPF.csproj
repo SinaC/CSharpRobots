@@ -50,6 +50,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="LoadRobots.cs" />
+    <Compile Include="WPFArena.cs" />
     <Compile Include="WPFMissile.cs" />
     <Compile Include="WPFRobot.cs" />
     <Page Include="MainWindow.xaml">

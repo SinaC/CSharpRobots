@@ -2,16 +2,25 @@
 
 namespace Robots
 {
+    // TODO: convert
     // Rook scans the battlefield like a rook, i.e., only 0,90,180,270; move horizontally only, but looks horz and vertically
     public class Rook : Robot
     {
-        public override string Name { get { return "Rook"; } }
+        public override void Init()
+        {
+            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
+        }
+
+        public override void Step()
+        {
+            // NOP
+        }
 
         int _course;
         int _boundary;
         int _damage;
 
-        public override void Main()
+        public void Main()
         {
             if (SDK.LocY < 500)
             {
