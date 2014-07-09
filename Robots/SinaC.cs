@@ -39,6 +39,7 @@ namespace Robots
         private int _previousDamage;
 
         private int _arenaSize;
+        private int _maxDamage;
         private int _missileSpeed;
         private int _maxExplosionRange;
         private int _maxExplosionRangePlusCannonRange;
@@ -49,6 +50,7 @@ namespace Robots
 
             _previousTime = SDK.Time;
             _arenaSize = SDK.Parameters["ArenaSize"];
+            _maxDamage = SDK.Parameters["MaxDamage"];
             _missileSpeed = SDK.Parameters["MissileSpeed"];
             _maxExplosionRange = SDK.Parameters["MaxExplosionRange"];
             _maxExplosionRangePlusCannonRange = SDK.Parameters["MaxExplosionRange"] + SDK.Parameters["MaxCannonRange"];
@@ -390,7 +392,7 @@ namespace Robots
             {
                 //System.Diagnostics.Debug.WriteLine("CHECKING IF FRIENDLY TARGET {0} - {1}, {2}", _id, locX, locY);
                 for (int i = 0; i < _teamCount; i++)
-                    if (i != _id)
+                    if (i != _id && TeamDamage[i] < _maxDamage)
                     {
                         //System.Diagnostics.Debug.WriteLine("TEAM MEMBER {0} : {1},{2}", i, TeamLocX[i], TeamLocY[i]);
                         double dx = locX - TeamLocX[i];

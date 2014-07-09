@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 
 namespace CSharpRobotsWPF
@@ -9,7 +10,7 @@ namespace CSharpRobotsWPF
     public class WPFRobot : INotifyPropertyChanged
     {
         public FrameworkElement RobotUIElement { get; set; }
-        public FrameworkElement LabelUIElement { get; set; }
+        public TextBlock LabelUIElement { get; set; }
 
         private Brush _color;
         public Brush Color
@@ -20,6 +21,20 @@ namespace CSharpRobotsWPF
                 if (_color != value)
                 {
                     _color = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _isAlive;
+        public bool IsAlive
+        {
+            get { return _isAlive; }
+            set
+            {
+                if (_isAlive != value)
+                {
+                    _isAlive = value;
                     OnPropertyChanged();
                 }
             }

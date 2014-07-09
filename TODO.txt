@@ -2,4 +2,3 @@ Add watchdog to monitor user Robot and stop a match if a team is considered as c
 Load robot dynamically from DLL (dll found in specified directory in app.config)
 redo speed/acceleration management using double
 add match time limit
-WPF 2 lists of robots: alive and others

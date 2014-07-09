@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Arena;
@@ -27,8 +30,11 @@ namespace CSharpRobotsWPF
 
         private readonly IReadonlyArena _arena;
 
-        private List<WPFRobot> _wpfRobots;
-        private List<WPFMissile> _wpfMissiles;
+        private ICollectionView _wpfRobotsAliveView;
+        private ICollectionView _wpfRobotsDeadView;
+
+        private ObservableCollection<WPFRobot> _wpfRobots;
+        private ObservableCollection<WPFMissile> _wpfMissiles;
 
         public WPFArena(MainWindow mainWindow)
         {
@@ -63,13 +69,19 @@ namespace CSharpRobotsWPF
                 {
                     // Create WPF robots
                     _mainWindow.BattlefieldCanvas.Children.Clear();
-                    _wpfMissiles = new List<WPFMissile>();
-                    _wpfRobots = new List<WPFRobot>();
-                    foreach (IReadonlyRobot robot in _arena.Robots)
+                    _wpfMissiles = new ObservableCollection<WPFMissile>();
+                    _wpfRobots = new ObservableCollection<WPFRobot>();
+                    foreach (IReadonlyRobot robot in _arena.Robots.OrderBy(x => x.Team).ThenBy(x => x.Id))
                         CreateRobot(robot);
+                    _wpfRobotsAliveView = new ListCollectionView(_wpfRobots);
+                    _wpfRobotsAliveView.Filter = o => (o as WPFRobot).IsAlive;
+                    _wpfRobotsDeadView = new ListCollectionView(_wpfRobots);
+                    _wpfRobotsDeadView.Filter = o => !(o as WPFRobot).IsAlive;
 
                     //
-                    _mainWindow.RobotInformationsList.DataContext = _wpfRobots;
+                    //_mainWindow.RobotInformationsList.DataContext = _wpfRobots;
+                    _mainWindow.AliveRobotInformationsList.ItemsSource = _wpfRobotsAliveView;
+                    _mainWindow.DeadRobotInformationsList.ItemsSource = _wpfRobotsDeadView;
 
                     // Start match
                     _arena.StartMatch();
@@ -134,6 +146,9 @@ namespace CSharpRobotsWPF
             }
 
             UpdateStatus();
+
+            _wpfRobotsAliveView.Refresh();
+            _wpfRobotsDeadView.Refresh();
         }
 
         private void UpdateStatus()
@@ -233,6 +248,7 @@ namespace CSharpRobotsWPF
             lock(robot.Statistics)
                 wpfRobot.Statistics = robot.Statistics.Select(x => x).ToDictionary(x => x.Key, x => x.Value);
 
+            wpfRobot.IsAlive = robot.Damage < 100;
             if (robot.State != RobotStates.Running)
                 DeleteRobot(wpfRobot);
             else
@@ -241,6 +257,10 @@ namespace CSharpRobotsWPF
                 UpdateUIPosition(wpfRobot.RobotUIElement, robot.LocX, robot.LocY);
                 UpdateUIPositionRelative(wpfRobot.LabelUIElement, -5, 5, wpfRobot.RobotUIElement);
             }
+            if (wpfRobot.IsAlive)
+                wpfRobot.LabelUIElement.FontWeight = FontWeights.Bold;
+            else
+                wpfRobot.LabelUIElement.FontWeight = FontWeights.Normal;
         }
 
         private void DeleteRobot(WPFRobot wpfRobot)

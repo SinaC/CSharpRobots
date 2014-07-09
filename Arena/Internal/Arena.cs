@@ -62,8 +62,8 @@ namespace Arena.Internal
                     }
             };
 
-        private readonly ManualResetEvent _stopEvent;
-        private CountdownEvent _robotSyncCountdownEvent;
+        private CancellationTokenSource _cancellationTokenSource;
+        private CountdownEvent _robotSyncCountdownEvent; // used to synchronize arena and robots
         private Task _mainTask;
 
         private Type[] _robotTypes;
@@ -74,15 +74,12 @@ namespace Arena.Internal
 
         private Tick _lastStepTick;
         private int _stepCount;
-        public Random Random { get; private set; }
+        private readonly RandomUnique _random;
 
         internal Arena()
         {
             // Initialize Random
-            Random = new Random();
-
-            // Initialize event
-            _stopEvent = new ManualResetEvent(false);
+            _random = new RandomUnique(0, ParametersSingleton.ArenaSize);
 
             //
             _robots = new List<Robot>();
@@ -213,18 +210,17 @@ namespace Arena.Internal
         {
             if (State == ArenaStates.Initialized)
             {
-                // Initialize semaphore, reserving an entry for each robots
+                // Initialize CountdownEvent to robot count, each robot main loop will decrement this value
                 _robotSyncCountdownEvent = new CountdownEvent(_robots.Count);
-                // Reset stop event
-                _stopEvent.Reset();
 
                 //
-                State = ArenaStates.Running;
+                State = ArenaStates.Starting;
                 //
                 MatchStart = Tick.Now;
 
-                // Start task
-                _mainTask = new Task(MainLoop);
+                // Create task, cancellation token and start task
+                _cancellationTokenSource = new CancellationTokenSource();
+                _mainTask = new Task(MainLoop, _cancellationTokenSource.Token);
                 _mainTask.Start();
             }
         }
@@ -313,8 +309,8 @@ namespace Arena.Internal
                     for (int i = 0; i < count; i++)
                         for (int t = 0; t < teamType.Length; t++)
                         {
-                            int x = Random.Next(ParametersSingleton.ArenaSize); // TODO: cannot give same position as another robot
-                            int y = Random.Next(ParametersSingleton.ArenaSize);
+                            int x = _random.Next(); // TODO: cannot give same position as another robot
+                            int y = _random.Next();
                             SDK.Robot userRobot = Activator.CreateInstance(teamType[t]) as SDK.Robot;
                             Robot robot = new Robot();
                             robot.Initialize(userRobot, this, teamType[t].Name, i, t, x, y);
@@ -343,8 +339,8 @@ namespace Arena.Internal
         private void StopMatch(ArenaStates newState)
         {
             State = newState;
-            // Stop main event
-            _stopEvent.Set();
+            // Stop main loop
+            _cancellationTokenSource.Cancel();
             // Stop robots
             foreach (Robot robot in _robots)
                 robot.Stop(); // TODO: asynchronous stop
@@ -354,8 +350,6 @@ namespace Arena.Internal
 
         private void MainLoop()
         {
-            FireOnArenaStarted();
-
             Log.WriteLine(Log.LogLevels.Debug, "Starting robots");
 
             // Start robots
@@ -364,11 +358,16 @@ namespace Arena.Internal
 
             Log.WriteLine(Log.LogLevels.Debug, "Robots started, waiting on CountdownEvent");
 
-            // Wait until every robot has been started (max 1 second)
-            //_robotSyncCountdownEvent.Wait(1000);
-            _robotSyncCountdownEvent.Wait();
+            // Wait until every robot has been started (max 2 seconds)
+            _robotSyncCountdownEvent.Wait(2000);
 
             Log.WriteLine(Log.LogLevels.Debug, "Robots have really been started, CountdownEvent reached 0");
+
+            //
+            State = ArenaStates.Running;
+
+            //
+            FireOnArenaStarted();
 
             // Start main loop
             Stopwatch sw = new Stopwatch();
@@ -386,10 +385,10 @@ namespace Arena.Internal
                 if (sleepTime < 0)
                     sleepTime = 1;
                 //Debug.WriteLine("Elapsed {0:0.0000} -> Sleep {1}", elapsed, sleepTime);
-                bool stopAsked = _stopEvent.WaitOne(sleepTime);
-                if (stopAsked)
+                _cancellationTokenSource.Token.WaitHandle.WaitOne(sleepTime);
+                if (_cancellationTokenSource.IsCancellationRequested)
                 {
-                    Log.WriteLine(Log.LogLevels.Info, "Stop event received. Stopping main loop");
+                    Log.WriteLine(Log.LogLevels.Info, "Task cancelled. Stopping arena main loop");
                     break;
                 }
             }

@@ -4,6 +4,7 @@
     {
         Created,
         Initialized,
+        Starting,
         Running,
         NoWinner,
         Winner,

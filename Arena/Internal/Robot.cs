@@ -12,9 +12,11 @@ namespace Arena.Internal
     internal class Robot : ISDKRobot, IReadonlyRobot
     {
         private CancellationTokenSource _cancellationTokenSource;
-        private readonly ManualResetEvent _stopEvent;
+        //private readonly ManualResetEvent _stopEvent;
         private Task _mainTask;
         private CountdownEvent _syncCountdownEvent;
+
+        private readonly Random _random;
 
         private Arena _arena;
         private SDK.Robot _userRobot;
@@ -40,7 +42,9 @@ namespace Arena.Internal
 
         public Robot()
         {
-            _stopEvent = new ManualResetEvent(false);
+            _random = new Random();
+
+            //_stopEvent = new ManualResetEvent(false);
 
             Statistics = new RobotStatistics();
 
@@ -81,7 +85,7 @@ namespace Arena.Internal
         {
             try
             {
-                _stopEvent.Reset();
+                //_stopEvent.Reset();
 
                 _syncCountdownEvent = syncCountdownEvent;
                 _matchStart = matchStart;
@@ -109,8 +113,8 @@ namespace Arena.Internal
                 Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} stopping.", Id, Team);
                 State = RobotStates.Stopping;
 
-                //_cancellationTokenSource.Cancel();
-                _stopEvent.Set();
+                _cancellationTokenSource.Cancel();
+                //_stopEvent.Set();
 
                 _mainTask.Wait(1000);
             }
@@ -375,7 +379,7 @@ namespace Arena.Internal
 
         public int Rand(int limit)
         {
-            return _arena.Random.Next(limit);
+            return _random.Next(limit);
         }
 
         public int Sqrt(int value)
@@ -473,16 +477,16 @@ namespace Arena.Internal
             {
                 // We cannot be sure, user's main loop is stopped when Damage == 100 or when asked to stopped
                 // So, we have to abort the thread even if it's not recommended
-                using (_cancellationTokenSource.Token.Register(Thread.CurrentThread.Abort))
+                //using (_cancellationTokenSource.Token.Register(Thread.CurrentThread.Abort))
                 {
                     Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}  signaling/waiting CountdownEvent", Id, Team);
-                    // Release an entry and wait
+                    // Decrement CountdownEvent and wait on it until every robot has started
                     if (!_syncCountdownEvent.Signal())
                     {
                         Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}  waiting other robots", Id, Team);
                         _syncCountdownEvent.Wait();
                     }
-                    Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}  every robots has been signaled", Id, Team);
+                    Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}  every robot has been signaled", Id, Team);
 
                     Stopwatch sw = new Stopwatch();
 
@@ -495,19 +499,24 @@ namespace Arena.Internal
                         //
                         sw.Reset();
                         sw.Start();
+                        
+                        // Step is called only if robot is alive
+                        if (Damage < ParametersSingleton.MaxDamage)
+                            _userRobot.Step();
                         //
-                        _userRobot.Step();
-                        //
+
                         sw.Stop();
                         double elapsed = sw.ElapsedMilliseconds;
                         int sleepTime = (int)(ParametersSingleton.StepDelay - elapsed);
                         if (sleepTime < 0)
                             sleepTime = 1;
                         //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Elapsed {0:0.0000} -> Sleep {1}", elapsed, sleepTime);
-                        bool stopAsked = _stopEvent.WaitOne(sleepTime);
-                        if (stopAsked)
+                        _cancellationTokenSource.Token.WaitHandle.WaitOne(sleepTime);
+                        //bool stopAsked = _stopEvent.WaitOne(sleepTime);
+                        //if (stopAsked)
+                        if (_cancellationTokenSource.IsCancellationRequested)
                         {
-                            Common.Log.WriteLine(Common.Log.LogLevels.Info, "Stop event received. Stopping main loop");
+                            Common.Log.WriteLine(Common.Log.LogLevels.Info, "Task cancelled. Stopping robot main loop");
                             break;
                         }
                     }
