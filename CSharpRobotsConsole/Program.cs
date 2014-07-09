@@ -6,8 +6,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Arena;
-using Common.Clock;
+using Common;
 using Robots;
+using Math = Common.Math;
 
 namespace CSharpRobotsConsole
 {
@@ -150,7 +151,7 @@ namespace CSharpRobotsConsole
                     Console.Write("+");
 
                     double destX, destY;
-                    Common.Helpers.Math.ComputePoint(missile.LaunchLocX, missile.LaunchLocY, missile.Range, missile.Heading, out destX, out destY);
+                    Math.ComputePoint(missile.LaunchLocX, missile.LaunchLocY, missile.Range, missile.Heading, out destX, out destY);
                     int screenDestX = GetX(destX, arena.ArenaSize);
                     int screenDestY = GetY(destY, arena.ArenaSize);
                     Console.SetCursorPosition(screenDestX, screenDestY);

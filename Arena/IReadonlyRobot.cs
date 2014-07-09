@@ -1,4 +1,6 @@
-﻿namespace Arena
+﻿using System.Collections.Generic;
+
+namespace Arena
 {
     public interface IReadonlyRobot
     {
@@ -18,5 +20,7 @@
         int Damage { get; }
 
         int CannonCount { get; }
+
+        IReadOnlyDictionary<string, int> Statistics { get; }
     }
 }

@@ -34,8 +34,8 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Clock\Tick.cs" />
-    <Compile Include="Helpers\Math.cs" />
+    <Compile Include="Tick.cs" />
+    <Compile Include="Math.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

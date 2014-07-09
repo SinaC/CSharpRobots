@@ -1,5 +1,4 @@
 ﻿using Common;
-using Common.Clock;
 
 namespace Arena.Internal
 {
@@ -71,7 +70,7 @@ namespace Arena.Internal
                 CurrentDistance = Range;
             // Update location
             double newLocX, newLocY;
-            Common.Helpers.Math.ComputePoint(LaunchLocX, LaunchLocY, CurrentDistance, Heading, out newLocX, out newLocY);
+            Math.ComputePoint(LaunchLocX, LaunchLocY, CurrentDistance, Heading, out newLocX, out newLocY);
             LocX = newLocX;
             LocY = newLocY;
 

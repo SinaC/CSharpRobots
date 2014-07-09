@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Common.Clock;
+using Common;
 using SDK;
+using Math = System.Math;
 
 namespace Arena.Internal
 {
@@ -13,6 +14,7 @@ namespace Arena.Internal
         private CancellationTokenSource _cancellationTokenSource;
         private readonly ManualResetEvent _stopEvent;
         private Task _mainTask;
+        private CountdownEvent _syncCountdownEvent;
 
         private Arena _arena;
         private SDK.Robot _userRobot;
@@ -34,36 +36,20 @@ namespace Arena.Internal
         public double RawLocX { get; private set; }
         public double RawLocY { get; private set; }
 
+        public RobotStatistics Statistics { get; private set; }
+
         public Robot()
         {
             _stopEvent = new ManualResetEvent(false);
+
+            Statistics = new RobotStatistics();
 
             State = RobotStates.Created;
         }
 
         public void Initialize(SDK.Robot userRobot, Arena arena, string teamName, int id, int team, int locX, int locY)
         {
-            _userRobot = userRobot;
-            _userRobot.SDK = this;
-            _arena = arena;
-            TeamName = teamName;
-            Id = id;
-            Team = team;
-            RawLocX = locX;
-            RawLocY = locY;
-            _damage = 0;
-            Speed = 0;
-
-            Heading = 0;
-            _desiredHeading = 0;
-            _desiredSpeed = 0;
-            _originX = locX;
-            _originY = LocY;
-            _currentDistance = 0;
-
-            State = RobotStates.Initialized;
-
-            Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} initialized.", Id, Team);
+            Initialize(userRobot, arena, teamName, id, team, locX, locY, 0, 0);
         }
 
         public void Initialize(SDK.Robot userRobot, Arena arena, string teamName, int id, int team, int locX, int locY, int heading, int speed)
@@ -91,12 +77,13 @@ namespace Arena.Internal
             Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} initialized.", Id, Team);
         }
 
-        public void Start(Tick matchStart)
+        public void Start(Tick matchStart, CountdownEvent syncCountdownEvent)
         {
             try
             {
                 _stopEvent.Reset();
 
+                _syncCountdownEvent = syncCountdownEvent;
                 _matchStart = matchStart;
                 State = RobotStates.Starting;
 
@@ -219,7 +206,7 @@ namespace Arena.Internal
                 // Speed is in percentage of MaxSpeed, realStepTime is in milliseconds and MaxSpeed is in m/s
                 _currentDistance += ((ParametersSingleton.MaxSpeed * Speed / 100.0) * realStepTime) / 1000.0;
                 double newX, newY;
-                Common.Helpers.Math.ComputePoint(_originX, _originY, _currentDistance, Heading, out newX, out newY);
+                Common.Math.ComputePoint(_originX, _originY, _currentDistance, Heading, out newX, out newY);
                 RawLocX = newX;
                 RawLocY = newY;
 
@@ -229,6 +216,7 @@ namespace Arena.Internal
 
         public void TakeDamage(int damage)
         {
+            Statistics.Increment("DAMAGE_TAKEN");
             Damage += damage;
             Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} takes {2} damage => {3} total damage", Id, Team, damage, Damage);
             if (Damage >= ParametersSingleton.MaxDamage)
@@ -240,6 +228,7 @@ namespace Arena.Internal
 
         public void Collision(int damage)
         {
+            Statistics.Increment("COLLISION");
             TakeDamage(damage);
             Speed = 0;
             _desiredSpeed = 0;
@@ -247,6 +236,7 @@ namespace Arena.Internal
 
         public void CollisionWall(int damage, double newLocX, double newLocY)
         {
+            Statistics.Increment("COLLISION_WALL");
             Collision(damage);
             RawLocX = newLocX;
             RawLocY = newLocY;
@@ -300,9 +290,9 @@ namespace Arena.Internal
 
         public int CannonCount { get; private set; }
 
-        public IReadOnlyDictionary<string, int> Parameters
+        IReadOnlyDictionary<string, int> IReadonlyRobot.Statistics
         {
-            get { return ParametersSingleton.Instance.Parameters; }
+            get { return Statistics.Values; }
         }
 
         #endregion
@@ -319,6 +309,8 @@ namespace Arena.Internal
 
         public int Cannon(int degrees, int range)
         {
+            Statistics.Increment("CANNON");
+
             // not needed anymore Thread.Sleep(1); // give time to others
             //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}. Cannon {2} {3}.", Id, Team, degrees, range);
             if (_damage > 100) // too damaged
@@ -328,7 +320,10 @@ namespace Arena.Internal
             range = FixCannonRange(range);
             double elapsed = LastMissileLaunchTick == null ? double.MaxValue : Tick.ElapsedSeconds(LastMissileLaunchTick);
             if (elapsed < 1) // reload
+            {
+                Statistics.Increment("CANNON_RELOAD");
                 return 0;
+            }
 
             //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] shooting interval {2}", TeamName, Id, elapsed);
             CannonCount++;
@@ -339,6 +334,7 @@ namespace Arena.Internal
 
         public void Drive(int degrees, int speed)
         {
+            Statistics.Increment("DRIVE");
             // not needed anymore Thread.Sleep(1); // give time to others
             //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}. Drive {2} {3}.", Id, Team, degrees, speed);
 
@@ -352,6 +348,8 @@ namespace Arena.Internal
 
         public int Scan(int degrees, int resolution)
         {
+            Statistics.Increment("SCAN");
+
             // not needed anymore Thread.Sleep(1); // give time to others
             //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}. Scan {2} {3}.", Id, Team, degrees, resolution);
             if (_damage > 100) // too damaged
@@ -368,6 +366,11 @@ namespace Arena.Internal
             get { return _arena.TeamCount(this); }
         }
 
+        public IReadOnlyDictionary<string, int> Parameters
+        {
+            get { return ParametersSingleton.Instance.Parameters; }
+        }
+
         #region Math
 
         public int Rand(int limit)
@@ -382,22 +385,22 @@ namespace Arena.Internal
 
         public int Sin(int degrees)
         {
-            return (int) (Math.Sin(Common.Helpers.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
+            return (int) (Math.Sin(Common.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
         }
 
         public int Cos(int degrees)
         {
-            return (int) (Math.Cos(Common.Helpers.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
+            return (int) (Math.Cos(Common.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
         }
 
         public int Tan(int degrees)
         {
-            return (int) (Math.Tan(Common.Helpers.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
+            return (int) (Math.Tan(Common.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
         }
 
         public int ATan(int value)
         {
-            return (int) Common.Helpers.Math.ToDegrees(Math.Atan(value/ParametersSingleton.TrigonometricBias));
+            return (int) Common.Math.ToDegrees(Math.Atan(value/ParametersSingleton.TrigonometricBias));
         }
 
         public double Sqrt(double value)
@@ -427,12 +430,12 @@ namespace Arena.Internal
 
         public double Deg2Rad(double degrees)
         {
-            return Common.Helpers.Math.ToRadians(degrees);
+            return Common.Math.ToRadians(degrees);
         }
 
         public double Rad2Deg(double radians)
         {
-            return Common.Helpers.Math.ToDegrees(radians);
+            return Common.Math.ToDegrees(radians);
         }
 
         public double Abs(double value)
@@ -455,6 +458,11 @@ namespace Arena.Internal
             return Math.Log(value);
         }
 
+        public double ATan2(double y, double x)
+        {
+            return Math.Atan2(y, x);
+        }
+
         #endregion
 
         #endregion
@@ -467,6 +475,15 @@ namespace Arena.Internal
                 // So, we have to abort the thread even if it's not recommended
                 using (_cancellationTokenSource.Token.Register(Thread.CurrentThread.Abort))
                 {
+                    Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}  signaling/waiting CountdownEvent", Id, Team);
+                    // Release an entry and wait
+                    if (!_syncCountdownEvent.Signal())
+                    {
+                        Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}  waiting other robots", Id, Team);
+                        _syncCountdownEvent.Wait();
+                    }
+                    Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}  every robots has been signaled", Id, Team);
+
                     Stopwatch sw = new Stopwatch();
 
                     _userRobot.Init();

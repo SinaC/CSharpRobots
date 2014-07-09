@@ -1,12 +1,23 @@
-﻿using SDK;
+﻿using System;
+using SDK;
 
 // TODO: 
 //  when approching border/corner stop driving randomly and go opposite direction
-//  when switching target, reset speed
+//  when switching enemy, reset enemy speed
+//  smart movement strategy
+//      when only one target, stay at 700 from target
+//      otherwise, move randomly
+//  share target infos, store every enemy around
+//      if multiple friend can shoot the same enemy, shoot this enemy first
+
 namespace Robots
 {
+
+    // Fire on target, using linear interpolation to predict target position
+    // Move randomly, change direction every 2 seconds or when hit
     public class SinaC : Robot
     {
+        public static readonly int BorderSize = 30;
         public static readonly double FriendRangeSquared = 80*80;
 
         // Shared infos between team members
@@ -17,14 +28,15 @@ namespace Robots
         private int _teamCount;
         private int _id; // own id
 
-        double _previousSuccessfulShootTime;
-        double _previousTime;
-        int _previousAngle;
-        int _previousRange;
-        double _previousEnemyX;
-        double _previousEnemyY;
-        double _previousSpeedX;
-        double _previousSpeedY;
+        private double _previousSuccessfulShootTime;
+        private double _previousTime;
+        private int _previousAngle;
+        private int _previousRange;
+        private double _previousEnemyX;
+        private double _previousEnemyY;
+        private double _previousSpeedX; // TODO: could be use to determine acceleration and get next speed estimation
+        private double _previousSpeedY;
+        private int _previousDamage;
 
         private int _arenaSize;
         private int _missileSpeed;
@@ -33,6 +45,8 @@ namespace Robots
 
         public override void Init()
         {
+            System.Diagnostics.Debug.WriteLine("{0:HH:mm:ss.fff} - SINAC - Init", DateTime.Now);
+
             _previousTime = SDK.Time;
             _arenaSize = SDK.Parameters["ArenaSize"];
             _missileSpeed = SDK.Parameters["MissileSpeed"];
@@ -41,10 +55,11 @@ namespace Robots
 
             _teamCount = SDK.FriendsCount;
             _id = SDK.Id;
+            _previousDamage = SDK.Damage;
 
             UpdateSharedInformations(SDK.LocX, SDK.LocY, SDK.Damage);
 
-            //DriveRandomly();
+            MoveRandomly();
             FireOnEnemy();
             _previousSuccessfulShootTime = SDK.Time;
         }
@@ -69,15 +84,19 @@ namespace Robots
                     _previousSuccessfulShootTime = SDK.Time;
             }
 
-            if (elapsedTime > 1) // 1 second since last move
+            AvoidBorders();
+
+            int currentDamage = SDK.Damage;
+            if (elapsedTime > 2 )//|| currentDamage > _previousDamage) // 2 seconds since last move or damaged
             {
-                System.Diagnostics.Debug.WriteLine("LOCATION {0} : {1},{2}", _id, SDK.LocX, SDK.LocY);
+                System.Diagnostics.Debug.WriteLine("{0:HH:mm:ss.fff} - SINAC - MOVE RANDOMLY FROM LOCATION {1} : {2},{3}  Damaged:{4}", DateTime.Now, _id, SDK.LocX, SDK.LocY, currentDamage > _previousDamage);
 
                 // Change direction
-                //DriveRandomly();
+                MoveRandomly();
 
                 //
                 _previousTime = currentTime;
+                _previousDamage = currentDamage;
             }
         }
 
@@ -108,12 +127,12 @@ namespace Robots
             
             if (found)
             {
-                System.Diagnostics.Debug.WriteLine("Nearest enemy of {0}: A{1} R{2} {3:0.0000},{4:0.0000}", _id, enemyAngle, enemyRange, enemyX, enemyY);
+                //System.Diagnostics.Debug.WriteLine("{0:HH:mm:ss.fff} - SINAC - Nearest enemy of {1}: A{2} R{3} {4:0.0000},{5:0.0000}", DateTime.Now,, _id, enemyAngle, enemyRange, enemyX, enemyY);
 
                 double currentSpeedX, currentSpeedY;
                 ComputeSpeed(elapsedTime, _previousEnemyX, _previousEnemyY, enemyX, enemyY, out currentSpeedX, out currentSpeedY);
 
-                //System.Diagnostics.Debug.WriteLine("TICK:{0:0.00} | Enemy position: {1:0.0000}, {2:0.0000} Speed : {3:0.0000}, {4:0.0000} | range {5} angle {6}", SDK.Time, currentEnemyX, currentEnemyY, currentSpeedX, currentSpeedY, currentRange, currentAngle);
+                //System.Diagnostics.Debug.WriteLine("{0:HH:mm:ss.fff} - SINAC - TICK:{1:0.00} | Enemy position: {2:0.0000}, {3:0.0000} Speed : {4:0.0000}, {5:0.0000} | range {6} angle {7}", DateTime.Now, SDK.Time, currentEnemyX, currentEnemyY, currentSpeedX, currentSpeedY, currentRange, currentAngle);
 
                 if (_previousRange != 0 && _previousAngle != 0) // Only fire when we have valid information
                 {
@@ -185,6 +204,28 @@ namespace Robots
                 return true;
             }
             return false;
+        }
+
+        private void AvoidBorders()
+        {
+            if (SDK.LocX < BorderSize)
+                SDK.Drive(0, 50);
+            else if (SDK.LocX >= _arenaSize - BorderSize)
+                SDK.Drive(180, 50);
+            else if (SDK.LocY < BorderSize)
+                SDK.Drive(90, 50);
+            else if (SDK.LocY >= _arenaSize - BorderSize)
+                SDK.Drive(270, 50);
+        }
+
+        private void MoveRandomly()
+        {
+            // Only when far from borders
+            if (SDK.LocX >= BorderSize && SDK.LocX <= _arenaSize - BorderSize && SDK.LocY >= BorderSize && SDK.LocY <= _arenaSize - BorderSize)
+            {
+                int driveAngle = SDK.Rand(360);
+                SDK.Drive(driveAngle, 50);
+            }
         }
 
         //***************************************************************

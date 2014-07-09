@@ -190,6 +190,22 @@ namespace SDK
         /// <returns></returns>
         double Log(double value);
 
+        /// <summary>
+        /// Returns the angle whose tangent is the quotient of two specified numbers.
+        /// </summary>
+        /// <param name="x">The y coordinate of a point.</param>
+        /// <param name="y">The x coordinate of a point.</param>
+        /// <returns>An angle, θ, measured in radians, such that -π≤θ≤π, and tan(θ) = y / x, where
+        ///     (x, y) is a point in the Cartesian plane. Observe the following: For (x,
+        ///     y) in quadrant 1, 0 &lt; θ &lt; π/2.For (x, y) in quadrant 2, π/2 &lt; θ≤π.For (x,
+        ///     y) in quadrant 3, -π &lt; θ &lt; -π/2.For (x, y) in quadrant 4, -π/2 &lt; θ &lt; 0.For
+        ///     points on the boundaries of the quadrants, the return value is the following:If
+        ///     y is 0 and x is not negative, θ = 0.If y is 0 and x is negative, θ = π.If
+        ///     y is positive and x is 0, θ = π/2.If y is negative and x is 0, θ = -π/2.If
+        ///     x or y is System.Double.NaN, or if x and y are either System.Double.PositiveInfinity
+        ///     or System.Double.NegativeInfinity, the method returns System.Double.NaN.</returns>
+        double ATan2(double y, double x);
+
         #endregion
     }
 }

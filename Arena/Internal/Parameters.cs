@@ -32,7 +32,7 @@ namespace Arena.Internal
         // Robot
         public const double TrigonometricBias = 100000;
         public const double MaxSpeed = 30; // in m/s
-        public const int MaxDamage = 10000;
+        public const int MaxDamage = 100;
         public const int MaxResolution = 20; // in degrees
         public const int MaxCannonRange = 700; // in meters
         public const int MaxAcceleration = 5; // acceleration factor in m/s

@@ -35,6 +35,7 @@
   <ItemGroup>
     <Compile Include="Counter.cs" />
     <Compile Include="CrazyCannon.cs" />
+    <Compile Include="HHRobot.cs" />
     <Compile Include="Maruko4.cs" />
     <Compile Include="Phalanx.cs" />
     <Compile Include="Platoon.cs" />

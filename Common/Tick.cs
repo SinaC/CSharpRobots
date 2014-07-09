@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace Common.Clock
+namespace Common
 {
     public class Tick
     {

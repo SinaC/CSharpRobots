@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.Generic;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Media;
@@ -7,7 +8,8 @@ namespace CSharpRobotsWPF
 {
     public class WPFRobot : INotifyPropertyChanged
     {
-        public FrameworkElement UIElement { get; set; }
+        public FrameworkElement RobotUIElement { get; set; }
+        public FrameworkElement LabelUIElement { get; set; }
 
         private Brush _color;
         public Brush Color
@@ -159,6 +161,20 @@ namespace CSharpRobotsWPF
                 if (_cannonCount != value)
                 {
                     _cannonCount = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private IReadOnlyDictionary<string, int> _statistics;
+        public IReadOnlyDictionary<string, int> Statistics
+        {
+            get { return _statistics; }
+            set
+            {
+                if (_statistics != value)
+                {
+                    _statistics = value;
                     OnPropertyChanged();
                 }
             }

@@ -2,38 +2,47 @@
 
 namespace Robots
 {
-    // TODO: convert
-    // Rabbit runs around the field, SDK.Randomly and never fires; use as a target
+    // Rabbit runs around the field, randomly and never fires; use as a target
     public class Rabbit : Robot
     {
+        private int _arenaSize;
+        private int _destX;
+        private int _destY;
+
         public override void Init()
         {
-            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
+            _arenaSize = SDK.Parameters["ArenaSize"];
+
+            GetRandomDestination();
         }
 
         public override void Step()
         {
-            // NOP
-        }
-
-        public void Main()
-        {
-            while (true)
+            int angle = GetAngle();
+            int distance = Distance(SDK.LocX, SDK.LocY, _destX, _destY);
+            if (distance > 50) // far from destination, drive
+                SDK.Drive(angle, 100);
+            else
             {
-                Go(SDK.Rand(1000), SDK.Rand(1000));
+                if (SDK.Speed == 0) // destination reached: change direction
+                    GetRandomDestination();
+                else // approaching destination, slowed down
+                    SDK.Drive(angle, 0);
             }
         }
 
-        private void Go(int destX, int destY)
+        private void GetRandomDestination()
         {
-            int course = PlotCourse(destX, destY);
-            SDK.Drive(course, 50);
-            while (Distance(SDK.LocX, SDK.LocY, destX, destY) > 50) 
-                if (SDK.Speed == 0) // stopped by collision with another robot
-                    SDK.Drive(course, 50);
-            SDK.Drive(course, 0);
-            while (SDK.Speed > 0) 
-                ;
+            _destX = SDK.Rand(_arenaSize);
+            _destY = SDK.Rand(_arenaSize);
+        }
+
+        private int GetAngle()
+        {
+            int diffX = _destX - SDK.LocX;
+            int diffY = _destY - SDK.LocY;
+
+            return (int)(SDK.Rad2Deg(SDK.ATan2(diffY, diffX)));
         }
 
         private int Distance(int x1, int y1, int x2, int y2)
@@ -41,38 +50,6 @@ namespace Robots
             int x = x1 - x2;
             int y = y1 - y2;
             int d = SDK.Sqrt((x * x) + (y * y));
-            return (d);
-        }
-
-        private int PlotCourse(int xx, int yy)
-        {
-            int d;
-            const int scale = 100000;
-            int curx = SDK.LocX;
-            int cury = SDK.LocY;
-            int x = curx - xx;
-            int y = cury - yy;
-            if (x == 0)
-            {
-                d = yy > cury ? 90 : 270;
-            }
-            else
-            {
-                if (yy < cury)
-                {
-                    if (xx > curx)
-                        d = 360 + SDK.ATan((scale * y) / x);
-                    else
-                        d = 180 + SDK.ATan((scale * y) / x);
-                }
-                else
-                {
-                    if (xx > curx)
-                        d = SDK.ATan((scale * y) / x);
-                    else
-                        d = 180 + SDK.ATan((scale * y) / x);
-                }
-            }
             return d;
         }
     }

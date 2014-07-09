@@ -1,19 +1,8 @@
 ﻿namespace Robots
 {
-    // TODO: convert
     //JJRobots (c) 2000 L.Boselli - boselli@uno.it
     public class Stinger : SDK.Robot
     {
-        public override void Init()
-        {
-            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
-        }
-
-        public override void Step()
-        {
-            // NOP
-        }
-
         private static int counter;
 
         private static int[] locX = new int[8];
@@ -33,6 +22,36 @@
         private int drive;
         private int id;
 
+        public override void Init()
+        {
+            if ((id = SDK.Id) == 0)
+            {
+                counter = 1;
+            }
+            else
+            {
+                counter = id + 1;
+            }
+            targetX = targetY = -1000;
+            speedX = speedY = 0;
+            lastTime = 0;
+            SDK.Drive(drive = SDK.Rand(360), 100);
+        }
+
+        public override void Step()
+        {
+            // NOP
+            if (scan - driveAngle < drive && drive < scan + driveAngle)
+            {
+                if (findNearestEnemy(0)) 
+                    shoot();
+            }
+            else
+                stopAndGo();
+        }
+
+        
+        /*
         public void Main()
         {
             if ((id = SDK.Id) == 0)
@@ -56,6 +75,7 @@
                 stopAndGo();
             }
         }
+        */
 
         private bool findNearestEnemy(int minDistance)
         {
@@ -137,24 +157,47 @@
         private void stopAndGo()
         {
             SDK.Drive(drive = scan, 49);
-            while (SDK.Speed >= 50)
+            if (SDK.Speed >= 0)
             {
                 findNearestEnemy(0);
                 shoot();
+                return;
             }
-            int dx = (int) (targetX - (locX[id] = SDK.LocX));
-            int dy = (int) (targetY - (locY[id] = SDK.LocY));
+            int dx = (int)(targetX - (locX[id] = SDK.LocX));
+            int dy = (int)(targetY - (locY[id] = SDK.LocY));
             if (dx == 0)
             {
                 drive = dy > 0 ? 90 : 270;
             }
             else
             {
-                drive = SDK.ATan(dy*100000/dx);
+                drive = SDK.ATan(dy * 100000 / dx);
                 if (dx < 0) drive += 180;
             }
             SDK.Drive(drive, 100);
         }
+
+        //private void stopAndGo()
+        //{
+        //    SDK.Drive(drive = scan, 49);
+        //    while (SDK.Speed >= 50)
+        //    {
+        //        findNearestEnemy(0);
+        //        shoot();
+        //    }
+        //    int dx = (int) (targetX - (locX[id] = SDK.LocX));
+        //    int dy = (int) (targetY - (locY[id] = SDK.LocY));
+        //    if (dx == 0)
+        //    {
+        //        drive = dy > 0 ? 90 : 270;
+        //    }
+        //    else
+        //    {
+        //        drive = SDK.ATan(dy*100000/dx);
+        //        if (dx < 0) drive += 180;
+        //    }
+        //    SDK.Drive(drive, 100);
+        //}
 
         private void shoot()
         {

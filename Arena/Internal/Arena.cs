@@ -5,11 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Common;
-using Common.Clock;
-
-// TODO: 
-//  add match time limit
-//  match statistics: friend damage, cannon count, wall damage, bump damage ...
+using Math = Common.Math;
 
 namespace Arena.Internal
 {
@@ -67,6 +63,7 @@ namespace Arena.Internal
             };
 
         private readonly ManualResetEvent _stopEvent;
+        private CountdownEvent _robotSyncCountdownEvent;
         private Task _mainTask;
 
         private Type[] _robotTypes;
@@ -84,13 +81,18 @@ namespace Arena.Internal
             // Initialize Random
             Random = new Random();
 
-            // Initialize stop event and task
+            // Initialize event
             _stopEvent = new ManualResetEvent(false);
 
             //
             _robots = new List<Robot>();
             _missiles = new List<Missile>();
             
+            // Force thread pool to use 32+1 work threads (32 robots max + 1 for arena)
+            int workerThreads, complete;
+            ThreadPool.GetMinThreads(out workerThreads, out complete);
+            ThreadPool.SetMinThreads(32+1, complete);
+
             //
             State = ArenaStates.Created;
         }
@@ -211,13 +213,17 @@ namespace Arena.Internal
         {
             if (State == ArenaStates.Initialized)
             {
+                // Initialize semaphore, reserving an entry for each robots
+                _robotSyncCountdownEvent = new CountdownEvent(_robots.Count);
+                // Reset stop event
+                _stopEvent.Reset();
+
                 //
                 State = ArenaStates.Running;
                 //
                 MatchStart = Tick.Now;
 
-                // Start task and reset stop event
-                _stopEvent.Reset();
+                // Start task
                 _mainTask = new Task(MainLoop);
                 _mainTask.Start();
             }
@@ -254,10 +260,10 @@ namespace Arena.Internal
             foreach (Robot r in _robots.Where(x => x != robot && x.State == RobotStates.Running))
             {
                 // TODO: use real position not last computed position (use range, originX, originY and speed)
-                bool isInSector = Common.Helpers.Math.IsInSector(robot.RawLocX, robot.RawLocY, degrees, resolution, r.RawLocX, r.RawLocY);
+                bool isInSector = Math.IsInSector(robot.RawLocX, robot.RawLocY, degrees, resolution, r.RawLocX, r.RawLocY);
                 if (isInSector)
                 {
-                    double distance = Common.Helpers.Math.Distance(robot.RawLocX, robot.RawLocY, r.RawLocX, r.RawLocY);
+                    double distance = Math.Distance(robot.RawLocX, robot.RawLocY, r.RawLocX, r.RawLocY);
                     if (distance < nearest)
                     {
                         nearest = distance;
@@ -350,9 +356,19 @@ namespace Arena.Internal
         {
             FireOnArenaStarted();
 
+            Log.WriteLine(Log.LogLevels.Debug, "Starting robots");
+
             // Start robots
             foreach (Robot robot in _robots)
-                robot.Start(MatchStart);
+                robot.Start(MatchStart, _robotSyncCountdownEvent);
+
+            Log.WriteLine(Log.LogLevels.Debug, "Robots started, waiting on CountdownEvent");
+
+            // Wait until every robot has been started (max 1 second)
+            //_robotSyncCountdownEvent.Wait(1000);
+            _robotSyncCountdownEvent.Wait();
+
+            Log.WriteLine(Log.LogLevels.Debug, "Robots have really been started, CountdownEvent reached 0");
 
             // Start main loop
             Stopwatch sw = new Stopwatch();
@@ -402,7 +418,7 @@ namespace Arena.Internal
                     robot.UpdateSpeed(realStepTime);
                     // Update heading; allow change below a certain speed
                     robot.UpdateHeading();
-                    // Update distance traveled on this heading, x & y
+                    // Update distance traveled on this heading, x and y
                     robot.UpdateLocation(realStepTime);
                     // Check collisions
                     if (robot.Speed > 0)
@@ -411,8 +427,8 @@ namespace Arena.Internal
                         Robot robot1 = robot;
                         foreach (Robot other in _robots.Where(x => x != robot1 && x.State == RobotStates.Running))
                         {
-                            double diffX = Math.Abs(robot.RawLocX - other.RawLocX);
-                            double diffY = Math.Abs(robot.RawLocY - other.RawLocY);
+                            double diffX = System.Math.Abs(robot.RawLocX - other.RawLocX);
+                            double diffY = System.Math.Abs(robot.RawLocY - other.RawLocY);
                             if (diffX < ParametersSingleton.CollisionDistance && diffY < ParametersSingleton.CollisionDistance) // Collision
                             {
                                 Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides Robot {2}[{3}]", robot.TeamName, robot.Id, other.TeamName, other.Id);
@@ -487,14 +503,21 @@ namespace Arena.Internal
                             // if missile has exploded, inflict damage on all nearby robots, according to hit range
                             if (missile.State == MissileStates.Exploding)
                             {
+                                Robot missileRobot = missile.Robot as Robot;
                                 foreach (Robot robot in _robots.Where(x => x.State == RobotStates.Running))
                                 {
-                                    double distance = Common.Helpers.Math.Distance(robot.RawLocX, robot.RawLocY, missile.LocX, missile.LocY);
+                                    double distance = Math.Distance(robot.RawLocX, robot.RawLocY, missile.LocX, missile.LocY);
                                     foreach (DamageByRange damageByRange in _damageByRanges)
                                         if (distance < damageByRange.Range)
                                         {
+                                            if (missileRobot != null)
+                                                missileRobot.Statistics.Increment(String.Format("DAMAGE_RANGE_{0}", damageByRange.Range));
                                             if (robot.Team == missile.Robot.Team)
+                                            {
+                                                if (missileRobot != null)
+                                                    missileRobot.Statistics.Increment("FRIENDLY_DAMAGE");
                                                 Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000} FRIENDLY DAMAGE", missile.Robot.TeamName, missile.Robot.Id, robot.TeamName, robot.Id, damageByRange.Damage, distance);
+                                            }
                                             else
                                                 Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000}", missile.Robot.TeamName, missile.Robot.Id, robot.TeamName, robot.Id, damageByRange.Damage, distance);
                                             robot.TakeDamage(damageByRange.Damage);

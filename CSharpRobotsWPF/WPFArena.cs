@@ -6,7 +6,6 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Arena;
-using Common;
 
 namespace CSharpRobotsWPF
 {
@@ -50,13 +49,13 @@ namespace CSharpRobotsWPF
             else
             {
                 // Initialize robots
-                //_arena.InitializeSolo(typeof(CrazyCannon), 500, 500, 0, 0);
-                //_arena.InitializeSingleMatch(typeof (Robots.SinaC), typeof (Robots.Target));
+                //_arena.InitializeSolo(typeof(Robots.SinaC), 0, 500, 0, 0);
+                //_arena.InitializeSingleMatch(typeof (Robots.SinaC), typeof (Robots.HHRobot));
                 //_arena.InitializeSingleMatch(typeof(Robots.Phalanx), typeof(Robots.Stinger));
                 //_arena.InitializeSingleMatch(typeof(Robots.Rook), typeof(Robots.Rabbit));
                 //_arena.InitializeSingleMatch(_robotTypes.FirstOrDefault(x => x.TeamName.Contains("Phalanx")), _robotTypes.FirstOrDefault(x => x.TeamName.Contains("SinaC")));
-                _arena.InitializeDoubleMatch(typeof (Robots.SinaC), typeof (Robots.Target));
-                //_arena.InitializeTeamMatch(typeof(Robots.SinaC), typeof(Robots.Target), typeof(Robots.Target), typeof(Robots.Target));
+                //_arena.InitializeDoubleMatch(typeof (Robots.SinaC), typeof (Robots.Stinger));
+                _arena.InitializeTeamMatch(typeof(Robots.SinaC), typeof(Robots.HHRobot), typeof(Robots.Stinger), typeof(Robots.Rabbit));
 
                 if (_arena.State == ArenaStates.Error)
                     _mainWindow.StatusText.Text = "Error while creating match";
@@ -216,7 +215,7 @@ namespace CSharpRobotsWPF
             UpdateMissile(wpfMissile, missile);
             // Set target
             double destX, destY;
-            Common.Helpers.Math.ComputePoint(missile.LaunchLocX, missile.LaunchLocY, missile.Range, missile.Heading, out destX, out destY);
+            Common.Math.ComputePoint(missile.LaunchLocX, missile.LaunchLocY, missile.Range, missile.Heading, out destX, out destY);
             UpdateUIPosition(wpfMissile.TargetUIElement, destX, destY);
             //
             _wpfMissiles.Add(wpfMissile);
@@ -231,42 +230,68 @@ namespace CSharpRobotsWPF
             wpfRobot.Heading = robot.Heading;
             wpfRobot.Speed = robot.Speed;
             wpfRobot.CannonCount = robot.CannonCount;
+            lock(robot.Statistics)
+                wpfRobot.Statistics = robot.Statistics.Select(x => x).ToDictionary(x => x.Key, x => x.Value);
 
-            UpdateUIPosition(wpfRobot.UIElement, robot.LocX, robot.LocY);
+            if (robot.State != RobotStates.Running)
+                DeleteRobot(wpfRobot);
+            else
+            {
+                wpfRobot.RobotUIElement.Visibility = Visibility.Visible;
+                UpdateUIPosition(wpfRobot.RobotUIElement, robot.LocX, robot.LocY);
+                UpdateUIPositionRelative(wpfRobot.LabelUIElement, -5, 5, wpfRobot.RobotUIElement);
+            }
         }
 
         private void DeleteRobot(WPFRobot wpfRobot)
         {
-            wpfRobot.UIElement.Visibility = Visibility.Hidden;
+            wpfRobot.RobotUIElement.Visibility = Visibility.Hidden;
         }
 
         private void CreateRobot(IReadonlyRobot robot)
         {
             WPFRobot wpfRobot = new WPFRobot
-            {
-                Id = robot.Id,
-                Team = robot.Team,
-                Name = robot.TeamName,
-                Color = TeamBrushes[robot.Team],
-                UIElement = new Rectangle
                 {
-                    Width = 4,
-                    Height = 4,
-                    Fill = TeamBrushes[robot.Team],
-                }
-            };
-            Panel.SetZIndex(wpfRobot.UIElement, 100);
-            _mainWindow.BattlefieldCanvas.Children.Add(wpfRobot.UIElement);
+                    Id = robot.Id,
+                    Team = robot.Team,
+                    Name = robot.TeamName,
+                    Color = TeamBrushes[robot.Team],
+                    RobotUIElement = new Rectangle
+                        {
+                            Width = 4,
+                            Height = 4,
+                            Fill = TeamBrushes[robot.Team],
+                        },
+                    LabelUIElement = new TextBlock
+                        {
+                            Width = 120,
+                            Height = 10,
+                            Text = String.Format("{0}[{1}]", robot.TeamName, robot.Id),
+                            FontSize = 8,
+                        }
+                };
+            Panel.SetZIndex(wpfRobot.RobotUIElement, 100);
+            Panel.SetZIndex(wpfRobot.LabelUIElement, 100);
+            _mainWindow.BattlefieldCanvas.Children.Add(wpfRobot.RobotUIElement);
+            _mainWindow.BattlefieldCanvas.Children.Add(wpfRobot.LabelUIElement);
             UpdateRobot(wpfRobot, robot);
             _wpfRobots.Add(wpfRobot);
+        }
+
+        private void UpdateUIPositionRelative(FrameworkElement element, double stepX, double stepY, FrameworkElement relativeTo)
+        {
+            double posX = Canvas.GetLeft(relativeTo) + stepX;
+            double posY = Canvas.GetTop(relativeTo) + stepY;
+            Canvas.SetTop(element, posY);
+            Canvas.SetLeft(element, posX);
         }
 
         private void UpdateUIPosition(FrameworkElement element, double locX, double locY)
         {
             double posX = locX / (1000.0 / _mainWindow.BattlefieldCanvas.Width) - element.Width / 2.0;
             double posY = locY / (1000.0 / _mainWindow.BattlefieldCanvas.Height) - element.Height / 2.0;
-            Canvas.SetTop(element, posX);
-            Canvas.SetLeft(element, posY);
+            Canvas.SetTop(element, posY);
+            Canvas.SetLeft(element, posX);
         }
 
         private FrameworkElement CreateExplosionUIElement()
