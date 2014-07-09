@@ -74,12 +74,15 @@ namespace Arena.Internal
 
         private Tick _lastStepTick;
         private int _stepCount;
-        private readonly RandomUnique _random;
+        private readonly RandomUnique _randomUnique;
+        
+        public Random Random { get; private set; }
 
         internal Arena()
         {
             // Initialize Random
-            _random = new RandomUnique(0, ParametersSingleton.ArenaSize);
+            _randomUnique = new RandomUnique(0, ParametersSingleton.ArenaSize);
+            Random = new Random();
 
             //
             _robots = new List<Robot>();
@@ -288,7 +291,7 @@ namespace Arena.Internal
         {
             try
             {
-                _random.Reset();
+                _randomUnique.Reset();
                 _missiles.Clear();
                 _robots.Clear();
                 WinningTeam = -1;
@@ -315,8 +318,8 @@ namespace Arena.Internal
                     for (int i = 0; i < count; i++)
                         for (int t = 0; t < teamType.Length; t++)
                         {
-                            int x = _random.Next(); // TODO: cannot give same position as another robot
-                            int y = _random.Next();
+                            int x = _randomUnique.Next(); // TODO: cannot give same position as another robot
+                            int y = _randomUnique.Next();
                             SDK.Robot userRobot = Activator.CreateInstance(teamType[t]) as SDK.Robot;
                             Robot robot = new Robot();
                             robot.Initialize(userRobot, this, teamType[t].Name, i, t, x, y);
@@ -409,158 +412,168 @@ namespace Arena.Internal
                 Tick now = Tick.Now;
                 double elapsed = Tick.TotalSeconds(now, MatchStart);
 
-                // Get real step time
-                double realStepTime = _lastStepTick == null ? ParametersSingleton.StepDelay : Tick.TotalMilliseconds(now, _lastStepTick);
-                _lastStepTick = now;
-
-                //Log.WriteLine(Log.LogLevels.Debug, "STEP: {0} {1:0.0000}  {2:0.00}", _stepCount, elapsed, realStepTime);
-                _stepCount++;
-
-                // Update robots
-                foreach (Robot robot in _robots.Where(x => x.State == RobotStates.Running))
+                if (elapsed > ParametersSingleton.MaxMatchTime)
                 {
-                    // Update speed, moderated by acceleration
-                    robot.UpdateSpeed(realStepTime);
-                    // Update heading; allow change below a certain speed
-                    robot.UpdateHeading();
-                    // Update distance traveled on this heading, x and y
-                    robot.UpdateLocation(realStepTime);
-                    // Check collisions
-                    if (robot.Speed > 0)
+                    Log.WriteLine(Log.LogLevels.Info, "Match timeout");
+                    StopMatch(ArenaStates.Timeout);
+                }
+                else
+                {
+                    // Get real step time
+                    double realStepTime = _lastStepTick == null ? ParametersSingleton.StepDelay : Tick.TotalMilliseconds(now, _lastStepTick);
+                    _lastStepTick = now;
+
+                    //Log.WriteLine(Log.LogLevels.Debug, "STEP: {0} {1:0.0000}  {2:0.00}", _stepCount, elapsed, realStepTime);
+                    _stepCount++;
+
+                    // Update robots
+                    foreach (Robot robot in _robots.Where(x => x.State == RobotStates.Running))
                     {
-                        // With other robots
-                        Robot robot1 = robot;
-                        foreach (Robot other in _robots.Where(x => x != robot1 && x.State == RobotStates.Running))
+                        // Update speed, moderated by acceleration
+                        robot.UpdateSpeed(realStepTime);
+                        // Update heading; allow change below a certain speed
+                        robot.UpdateHeading();
+                        // Update distance traveled on this heading, x and y
+                        robot.UpdateLocation(realStepTime);
+                        // Check collisions
+                        if (robot.Speed > 0)
                         {
-                            double diffX = System.Math.Abs(robot.RawLocX - other.RawLocX);
-                            double diffY = System.Math.Abs(robot.RawLocY - other.RawLocY);
-                            if (diffX < ParametersSingleton.CollisionDistance && diffY < ParametersSingleton.CollisionDistance) // Collision
+                            // With other robots
+                            Robot robot1 = robot;
+                            foreach (Robot other in _robots.Where(x => x != robot1 && x.State == RobotStates.Running))
                             {
-                                Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides Robot {2}[{3}]", robot.TeamName, robot.Id, other.TeamName, other.Id);
-                                // Damage moving robot and stop it
-                                robot.Collision(ParametersSingleton.CollisionDamage);
-                                // Damage colliding robot
-                                other.Collision(ParametersSingleton.CollisionDamage);
+                                double diffX = System.Math.Abs(robot.RawLocX - other.RawLocX);
+                                double diffY = System.Math.Abs(robot.RawLocY - other.RawLocY);
+                                if (diffX < ParametersSingleton.CollisionDistance && diffY < ParametersSingleton.CollisionDistance) // Collision
+                                {
+                                    Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides Robot {2}[{3}]", robot.TeamName, robot.Id, other.TeamName, other.Id);
+                                    // Damage moving robot and stop it
+                                    robot.Collision(ParametersSingleton.CollisionDamage);
+                                    // Damage colliding robot
+                                    other.Collision(ParametersSingleton.CollisionDamage);
+                                }
                             }
-                        }
-                        // With walls
-                        if (robot.RawLocX < 0)
-                        {
-                            Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides left wall", robot.TeamName, robot.Id);
-                            robot.CollisionWall(ParametersSingleton.CollisionDamage, 0, robot.RawLocY);
-                        }
-                        else if (robot.RawLocX >= ParametersSingleton.ArenaSize)
-                        {
-                            Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides right wall", robot.TeamName, robot.Id);
-                            robot.CollisionWall(ParametersSingleton.CollisionDamage, ParametersSingleton.ArenaSize - 1, robot.RawLocY);
-                        }
-                        if (robot.RawLocY < 0)
-                        {
-                            Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides top wall", robot.TeamName, robot.Id);
-                            robot.CollisionWall(ParametersSingleton.CollisionDamage, robot.RawLocX, 0);
-                        }
-                        else if (robot.RawLocY >= ParametersSingleton.ArenaSize)
-                        {
-                            Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides bottom wall", robot.TeamName, robot.Id);
-                            robot.CollisionWall(ParametersSingleton.CollisionDamage, robot.RawLocX, ParametersSingleton.ArenaSize - 1);
+                            // With walls
+                            if (robot.RawLocX < 0)
+                            {
+                                Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides left wall", robot.TeamName, robot.Id);
+                                robot.CollisionWall(ParametersSingleton.CollisionDamage, 0, robot.RawLocY);
+                            }
+                            else if (robot.RawLocX >= ParametersSingleton.ArenaSize)
+                            {
+                                Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides right wall", robot.TeamName, robot.Id);
+                                robot.CollisionWall(ParametersSingleton.CollisionDamage, ParametersSingleton.ArenaSize - 1, robot.RawLocY);
+                            }
+                            if (robot.RawLocY < 0)
+                            {
+                                Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides top wall", robot.TeamName, robot.Id);
+                                robot.CollisionWall(ParametersSingleton.CollisionDamage, robot.RawLocX, 0);
+                            }
+                            else if (robot.RawLocY >= ParametersSingleton.ArenaSize)
+                            {
+                                Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides bottom wall", robot.TeamName, robot.Id);
+                                robot.CollisionWall(ParametersSingleton.CollisionDamage, robot.RawLocX, ParametersSingleton.ArenaSize - 1);
+                            }
                         }
                     }
-                }
 
-                // Update missiles
-                lock (_missiles)
-                {
-                    foreach (Missile missile in _missiles)
+                    // Update missiles
+                    lock (_missiles)
                     {
-                        if (missile.State == MissileStates.Flying)
+                        foreach (Missile missile in _missiles)
                         {
-                            missile.UpdatePosition(realStepTime);
+                            if (missile.State == MissileStates.Flying)
+                            {
+                                missile.UpdatePosition(realStepTime);
 
-                            // Check for missile hitting walls
-                            if (missile.LocX < 0)
-                            {
-                                Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides left wall", missile.Robot.TeamName, missile.Robot.Id);
-                                missile.CollisionWall(0, missile.LocY);
-                            }
-                            if (missile.LocX >= ParametersSingleton.ArenaSize)
-                            {
-                                Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides right wall", missile.Robot.TeamName, missile.Robot.Id);
-                                missile.CollisionWall(ParametersSingleton.ArenaSize - 1, missile.LocY);
-                            }
-                            if (missile.LocY < 0)
-                            {
-                                Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides top wall", missile.Robot.TeamName, missile.Robot.Id);
-                                missile.CollisionWall(missile.LocX, 0);
-                            }
-                            if (missile.LocY >= ParametersSingleton.ArenaSize)
-                            {
-                                Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides bottom wall", missile.Robot.TeamName, missile.Robot.Id);
-                                missile.CollisionWall(missile.LocX, ParametersSingleton.ArenaSize - 1);
-                            }
-
-                            // Check for missile reaching target range
-                            if (missile.CurrentDistance >= missile.Range)
-                            {
-                                Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] reached its target", missile.Robot.TeamName, missile.Robot.Id);
-                                missile.TargetReached();
-                            }
-
-                            // if missile has exploded, inflict damage on all nearby robots, according to hit range
-                            if (missile.State == MissileStates.Exploding)
-                            {
-                                Robot missileRobot = missile.Robot as Robot;
-                                foreach (Robot robot in _robots.Where(x => x.State == RobotStates.Running))
+                                // Check for missile hitting walls
+                                if (missile.LocX < 0)
                                 {
-                                    double distance = Math.Distance(robot.RawLocX, robot.RawLocY, missile.LocX, missile.LocY);
-                                    foreach (DamageByRange damageByRange in _damageByRanges)
-                                        if (distance < damageByRange.Range)
-                                        {
-                                            if (missileRobot != null)
-                                                missileRobot.Statistics.Increment(String.Format("DAMAGE_RANGE_{0}", damageByRange.Range));
-                                            if (robot.Team == missile.Robot.Team)
-                                            {
-                                                if (missileRobot != null)
-                                                    missileRobot.Statistics.Increment("FRIENDLY_DAMAGE");
-                                                Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000} FRIENDLY DAMAGE", missile.Robot.TeamName, missile.Robot.Id, robot.TeamName, robot.Id, damageByRange.Damage, distance);
-                                            }
-                                            else
-                                                Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000}", missile.Robot.TeamName, missile.Robot.Id, robot.TeamName, robot.Id, damageByRange.Damage, distance);
-                                            robot.TakeDamage(damageByRange.Damage);
-                                            break; // missile in this range, no need to check other ranges
-                                        }
+                                    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides left wall", missile.Robot.TeamName, missile.Robot.Id);
+                                    missile.CollisionWall(0, missile.LocY);
+                                }
+                                if (missile.LocX >= ParametersSingleton.ArenaSize)
+                                {
+                                    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides right wall", missile.Robot.TeamName, missile.Robot.Id);
+                                    missile.CollisionWall(ParametersSingleton.ArenaSize - 1, missile.LocY);
+                                }
+                                if (missile.LocY < 0)
+                                {
+                                    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides top wall", missile.Robot.TeamName, missile.Robot.Id);
+                                    missile.CollisionWall(missile.LocX, 0);
+                                }
+                                if (missile.LocY >= ParametersSingleton.ArenaSize)
+                                {
+                                    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides bottom wall", missile.Robot.TeamName, missile.Robot.Id);
+                                    missile.CollisionWall(missile.LocX, ParametersSingleton.ArenaSize - 1);
                                 }
 
-                                missile.UpdateExploding();
+                                // Check for missile reaching target range
+                                if (missile.CurrentDistance >= missile.Range)
+                                {
+                                    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] reached its target", missile.Robot.TeamName, missile.Robot.Id);
+                                    missile.TargetReached();
+                                }
+
+                                // if missile has exploded, inflict damage on all nearby robots, according to hit range
+                                if (missile.State == MissileStates.Exploding)
+                                {
+                                    Robot missileRobot = missile.Robot as Robot;
+                                    foreach (Robot robot in _robots.Where(x => x.State == RobotStates.Running))
+                                    {
+                                        double distance = Math.Distance(robot.RawLocX, robot.RawLocY, missile.LocX, missile.LocY);
+                                        foreach (DamageByRange damageByRange in _damageByRanges)
+                                            if (distance < damageByRange.Range)
+                                            {
+                                                if (missileRobot != null)
+                                                    missileRobot.Statistics.Increment(String.Format("DAMAGE_RANGE_{0}", damageByRange.Range));
+                                                if (robot.Team == missile.Robot.Team)
+                                                {
+                                                    robot.Statistics.Increment("FRIENDLY_DAMAGE_TAKEN");
+                                                    if (missileRobot != null)
+                                                        missileRobot.Statistics.Increment("FRIENDLY_DAMAGE");
+                                                    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000} FRIENDLY DAMAGE", missile.Robot.TeamName, missile.Robot.Id, robot.TeamName, robot.Id, damageByRange.Damage, distance);
+                                                }
+                                                else
+                                                    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000}", missile.Robot.TeamName, missile.Robot.Id, robot.TeamName, robot.Id, damageByRange.Damage, distance);
+                                                robot.Statistics.Increment(String.Format("DAMAGE_TAKEN_RANGE_{0}", damageByRange.Range));
+                                                robot.TakeDamage(damageByRange.Damage);
+                                                break; // missile in this range, no need to check other ranges
+                                            }
+                                    }
+
+                                    missile.UpdateExploding();
+                                }
                             }
+                            else if (missile.State == MissileStates.Exploded)
+                                missile.UpdateExploded(ParametersSingleton.ExplosionDisplayDelay);
                         }
-                        else if (missile.State == MissileStates.Exploded)
-                            missile.UpdateExploded(ParametersSingleton.ExplosionDisplayDelay);
+                        // Remove deleted missile
+                        _missiles.RemoveAll(x => x.State == MissileStates.Deleted);
                     }
-                    // Remove deleted missile
-                    _missiles.RemoveAll(x => x.State == MissileStates.Deleted);
-                }
 
-                if (_robots.All(x => x.State != RobotStates.Created && x.State != RobotStates.Initialized && x.State != RobotStates.Starting)) // check only if robot has started
-                {
-                    // Check if there is a winning team
-                    List<int> teamsWithRobotRunning = _robots.Where(x => x.State == RobotStates.Running).GroupBy(x => x.Team).Select(g => g.Key).ToList();
-                    if (teamsWithRobotRunning.Count == 0)
+                    if (_robots.All(x => x.State != RobotStates.Created && x.State != RobotStates.Initialized && x.State != RobotStates.Starting)) // check only if robot has started
                     {
-                        Log.WriteLine(Log.LogLevels.Info, "No robot alive -> Draw");
-                        // Draw;
-                        StopMatch(ArenaStates.NoWinner);
-                    }
-                    else if (teamsWithRobotRunning.Count == 1 && Mode != ArenaModes.Solo)
-                    {
-                        // And the winner is
-                        WinningTeam = teamsWithRobotRunning[0];
-                        Log.WriteLine(Log.LogLevels.Info, "And the winner is {0}", WinningTeam);
+                        // Check if there is a winning team
+                        List<int> teamsWithRobotRunning = _robots.Where(x => x.State == RobotStates.Running).GroupBy(x => x.Team).Select(g => g.Key).ToList();
+                        if (teamsWithRobotRunning.Count == 0)
+                        {
+                            Log.WriteLine(Log.LogLevels.Info, "No robot alive -> Draw");
+                            // Draw;
+                            StopMatch(ArenaStates.Draw);
+                        }
+                        else if (teamsWithRobotRunning.Count == 1 && Mode != ArenaModes.Solo)
+                        {
+                            // And the winner is
+                            WinningTeam = teamsWithRobotRunning[0];
+                            Log.WriteLine(Log.LogLevels.Info, "And the winner is {0}", WinningTeam);
 
-                        StopMatch(ArenaStates.Winner);
+                            StopMatch(ArenaStates.Winner);
+                        }
                     }
+
+                    FireOnArenaStep();
                 }
-
-                FireOnArenaStep();
             }
         }
 

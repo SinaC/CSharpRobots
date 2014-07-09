@@ -9,6 +9,7 @@ using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Arena;
+using Common;
 
 namespace CSharpRobotsWPF
 {
@@ -60,8 +61,8 @@ namespace CSharpRobotsWPF
                 //_arena.InitializeSingleMatch(typeof(Robots.Phalanx), typeof(Robots.Stinger));
                 //_arena.InitializeSingleMatch(typeof(Robots.Platoon), typeof(Robots.Stinger));
                 //_arena.InitializeSingleMatch(_robotTypes.FirstOrDefault(x => x.TeamName.Contains("Phalanx")), _robotTypes.FirstOrDefault(x => x.TeamName.Contains("SinaC")));
-                _arena.InitializeDoubleMatch(typeof(Robots.Platoon), typeof(Robots.Stinger));
-                //_arena.InitializeTeamMatch(typeof(Robots.SinaC), typeof(Robots.HHRobot), typeof(Robots.Stinger), typeof(Robots.Rabbit));
+                //_arena.InitializeDoubleMatch(typeof(Robots.Platoon), typeof(Robots.Stinger));
+                _arena.InitializeTeamMatch(typeof(Robots.SinaC), typeof(Robots.HHRobot), typeof(Robots.Stinger), typeof(Robots.Platoon));
 
                 if (_arena.State == ArenaStates.Error)
                     _mainWindow.StatusText.Text = "Error while creating match";
@@ -163,8 +164,11 @@ namespace CSharpRobotsWPF
                 case ArenaStates.Winner:
                     _mainWindow.StatusText.Text = String.Format("And the winner is Team {0}", _arena.WinningTeam);
                     break;
-                case ArenaStates.NoWinner:
+                case ArenaStates.Draw:
                     _mainWindow.StatusText.Text = "Draw - No winner";
+                    break;
+                case ArenaStates.Timeout:
+                    _mainWindow.StatusText.Text = "Timeout";
                     break;
                 case ArenaStates.Stopped:
                     _mainWindow.StatusText.Text = "Stopped";
@@ -173,6 +177,15 @@ namespace CSharpRobotsWPF
                     _mainWindow.StatusText.Text = String.Format("State : {0}", _arena.State);
                     break;
             }
+            if (_arena.State == ArenaStates.Running)
+            {
+                double maxMatchTime = _arena.Parameters["MaxMatchTime"];
+                double elapsedSeconds = Tick.ElapsedSeconds(_arena.MatchStart);
+                double timeLeft = maxMatchTime - elapsedSeconds;
+                _mainWindow.Title = String.Format("C# Robots - {0:0.00}sec left", timeLeft);
+            }
+            else
+                _mainWindow.Title = "C# Robots";
         }
 
         private void UpdateMissile(WPFMissile wpfMissile, IReadonlyMissile missile)

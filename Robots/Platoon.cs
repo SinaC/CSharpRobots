@@ -1,24 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Robots
+﻿namespace Robots
 {
-    // TODO: convert
     //JJRobots (c) 2000 L.Boselli - boselli@uno.it
     public class Platoon : SDK.Robot
     {
-        private static int count;
         private static int[] cornerX = { 50, 950, 950, 50 };
         private static int[] cornerY = { 50, 50, 950, 950 };
         private static int targetX = 500;
         private static int targetY = 500;
         private static int[] locX = new int[8];
         private static int[] locY = new int[8];
-        private static int corner1;
+        private static int corner1 = -1;
 
+        private int count;
         private int nCorner;
         private int scan;
         private int id;
@@ -26,18 +19,13 @@ namespace Robots
         private int dx, dy, angle;
 
         public int state = 0;
-        
+
         public override void Init()
         {
-            if ((id = SDK.Id) == 0)
-            {
-                count = 1;
+            id = SDK.Id;
+            count = SDK.FriendsCount;
+            if (corner1 == -1)
                 corner1 = SDK.Rand(4);
-            }
-            else
-            {
-                count = id + 1;
-            }
             nCorner = corner1;
             dx = cornerX[nCorner] - (locX[id] = SDK.LocX);
             dy = cornerY[nCorner] - (locY[id] = SDK.LocY);

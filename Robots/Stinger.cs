@@ -3,13 +3,13 @@
     //JJRobots (c) 2000 L.Boselli - boselli@uno.it
     public class Stinger : SDK.Robot
     {
-        private static int counter;
-
+        
         private static int[] locX = new int[8];
         private static int[] locY = new int[8];
 
-        private static int driveAngle = 5;
+        private const int driveAngle = 5;
 
+        private int counter;
         private double oldTargetX;
         private double oldTargetY;
         private double targetX;
@@ -24,14 +24,8 @@
 
         public override void Init()
         {
-            if ((id = SDK.Id) == 0)
-            {
-                counter = 1;
-            }
-            else
-            {
-                counter = id + 1;
-            }
+            id = SDK.Id;
+            counter = SDK.FriendsCount;
             targetX = targetY = -1000;
             speedX = speedY = 0;
             lastTime = 0;

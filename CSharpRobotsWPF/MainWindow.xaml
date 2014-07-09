@@ -25,8 +25,8 @@
             </Button>
 
             <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1">
-                <ScrollViewer ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <ItemsControl Grid.Row="1" x:Name="AliveRobotInformationsList" ItemsSource="{Binding}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="AliveRobotInformationsList" ItemsSource="{Binding}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Vertical">
@@ -61,11 +61,11 @@
                 </ScrollViewer>
             </Border>
             <Border Grid.Row="2" BorderBrush="Black" BorderThickness="1">
-                <ScrollViewer ScrollViewer.VerticalScrollBarVisibility="Auto">
-                    <ItemsControl Grid.Row="1" x:Name="DeadRobotInformationsList" ItemsSource="{Binding}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="DeadRobotInformationsList" ItemsSource="{Binding}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Vertical" ToolTip="Toto">
+                                <StackPanel Orientation="Vertical">
                                     <TextBlock Foreground="{Binding Color}">
                                         <TextBlock.Text>
                                             <MultiBinding StringFormat="{}{0}[{1}] Dmg {2} | {3}">
@@ -87,9 +87,9 @@
                                             </MultiBinding>
                                         </TextBlock.Text>
                                     </TextBlock>
-                                    <!--<StackPanel.ToolTip>
+                                    <StackPanel.ToolTip>
                                         <ItemsControl ItemsSource="{Binding Statistics}"/>
-                                    </StackPanel.ToolTip>-->
+                                    </StackPanel.ToolTip>
                                 </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

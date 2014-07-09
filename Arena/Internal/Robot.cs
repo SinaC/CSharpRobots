@@ -16,8 +16,6 @@ namespace Arena.Internal
         private Task _mainTask;
         private CountdownEvent _syncCountdownEvent;
 
-        private readonly Random _random;
-
         private Arena _arena;
         private SDK.Robot _userRobot;
         private Tick _matchStart;
@@ -42,8 +40,6 @@ namespace Arena.Internal
 
         public Robot()
         {
-            _random = new Random();
-
             //_stopEvent = new ManualResetEvent(false);
 
             Statistics = new RobotStatistics();
@@ -379,7 +375,7 @@ namespace Arena.Internal
 
         public int Rand(int limit)
         {
-            return _random.Next(limit);
+            return _arena.Random.Next(limit);
         }
 
         public int Sqrt(int value)
