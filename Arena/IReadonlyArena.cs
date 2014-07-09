@@ -22,6 +22,8 @@ namespace Arena
         List<IReadonlyRobot> Robots { get; }
         List<IReadonlyMissile> Missiles { get; }
 
+        IReadOnlyDictionary<string, int> Parameters { get; }
+
         event ArenaStartedHandler ArenaStarted;
         event ArenaStoppedHandler ArenaStopped;
         event ArenaStepHandler ArenaStep;

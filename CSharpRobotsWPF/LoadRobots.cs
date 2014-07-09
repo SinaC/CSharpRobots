@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using SDK;
 
 namespace CSharpRobotsWPF
 {
@@ -25,6 +22,21 @@ namespace CSharpRobotsWPF
                 }
             }
             return types;
+        }
+
+        public static Type LoadRobotFromPath(string path, string robotName)
+        {
+            Type robotSDKType = typeof(SDK.Robot);
+
+            foreach (string file in Directory.EnumerateFiles(path, "*.dll"))
+            {
+                Assembly assembly = Assembly.LoadFile(file);
+
+                Type type = assembly.GetExportedTypes().FirstOrDefault(x => x.Name == robotName && x.IsSubclassOf(robotSDKType));
+                if (type != null)
+                    return type;
+            }
+            return null;
         }
     }
 }

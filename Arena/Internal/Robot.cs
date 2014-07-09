@@ -534,7 +534,7 @@ namespace Arena.Internal
             {
                 State = RobotStates.Stopped;
 
-                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} stopped.", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} task stopped.", Id, Team);
             }
         }
         

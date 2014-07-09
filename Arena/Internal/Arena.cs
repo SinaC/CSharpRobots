@@ -113,6 +113,11 @@ namespace Arena.Internal
 
         public int WinningTeam { get; private set; }
 
+        public IReadOnlyDictionary<string, int> Parameters
+        {
+            get { return ParametersSingleton.Instance.Parameters; }
+        }
+
         public List<IReadonlyRobot> Robots
         {
             //http://stackoverflow.com/questions/3128889/lock-vs-toarray-for-thread-safe-foreach-access-of-list-collection
@@ -283,6 +288,7 @@ namespace Arena.Internal
         {
             try
             {
+                _random.Reset();
                 _missiles.Clear();
                 _robots.Clear();
                 WinningTeam = -1;

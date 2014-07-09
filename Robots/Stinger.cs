@@ -50,9 +50,9 @@
                 stopAndGo();
         }
 
-        
+
         /*
-        public void Main()
+        private void OriginalVersion()
         {
             if ((id = SDK.Id) == 0)
             {

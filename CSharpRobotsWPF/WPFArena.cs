@@ -30,10 +30,8 @@ namespace CSharpRobotsWPF
 
         private readonly IReadonlyArena _arena;
 
-        private ICollectionView _wpfRobotsAliveView;
-        private ICollectionView _wpfRobotsDeadView;
-
         private ObservableCollection<WPFRobot> _wpfRobots;
+        private ObservableCollection<WPFRobot> _wpfDeadRobots;
         private ObservableCollection<WPFMissile> _wpfMissiles;
 
         public WPFArena(MainWindow mainWindow)
@@ -55,13 +53,15 @@ namespace CSharpRobotsWPF
             else
             {
                 // Initialize robots
+                //Type robot1 = LoadRobots.LoadRobotFromPath(@"D:\GITHUB\CSharpRobots\Robots\bin\Debug\", "SinaC");
+                //_arena.InitializeSolo(robot1, 0, 500, 0, 0);
                 //_arena.InitializeSolo(typeof(Robots.SinaC), 0, 500, 0, 0);
                 //_arena.InitializeSingleMatch(typeof (Robots.SinaC), typeof (Robots.HHRobot));
                 //_arena.InitializeSingleMatch(typeof(Robots.Phalanx), typeof(Robots.Stinger));
-                //_arena.InitializeSingleMatch(typeof(Robots.Rook), typeof(Robots.Rabbit));
+                //_arena.InitializeSingleMatch(typeof(Robots.Platoon), typeof(Robots.Stinger));
                 //_arena.InitializeSingleMatch(_robotTypes.FirstOrDefault(x => x.TeamName.Contains("Phalanx")), _robotTypes.FirstOrDefault(x => x.TeamName.Contains("SinaC")));
-                //_arena.InitializeDoubleMatch(typeof (Robots.SinaC), typeof (Robots.Stinger));
-                _arena.InitializeTeamMatch(typeof(Robots.SinaC), typeof(Robots.HHRobot), typeof(Robots.Stinger), typeof(Robots.Rabbit));
+                _arena.InitializeDoubleMatch(typeof(Robots.Platoon), typeof(Robots.Stinger));
+                //_arena.InitializeTeamMatch(typeof(Robots.SinaC), typeof(Robots.HHRobot), typeof(Robots.Stinger), typeof(Robots.Rabbit));
 
                 if (_arena.State == ArenaStates.Error)
                     _mainWindow.StatusText.Text = "Error while creating match";
@@ -73,15 +73,11 @@ namespace CSharpRobotsWPF
                     _wpfRobots = new ObservableCollection<WPFRobot>();
                     foreach (IReadonlyRobot robot in _arena.Robots.OrderBy(x => x.Team).ThenBy(x => x.Id))
                         CreateRobot(robot);
-                    _wpfRobotsAliveView = new ListCollectionView(_wpfRobots);
-                    _wpfRobotsAliveView.Filter = o => (o as WPFRobot).IsAlive;
-                    _wpfRobotsDeadView = new ListCollectionView(_wpfRobots);
-                    _wpfRobotsDeadView.Filter = o => !(o as WPFRobot).IsAlive;
+                    _wpfDeadRobots = new ObservableCollection<WPFRobot>();
 
                     //
-                    //_mainWindow.RobotInformationsList.DataContext = _wpfRobots;
-                    _mainWindow.AliveRobotInformationsList.ItemsSource = _wpfRobotsAliveView;
-                    _mainWindow.DeadRobotInformationsList.ItemsSource = _wpfRobotsDeadView;
+                    _mainWindow.AliveRobotInformationsList.DataContext = _wpfRobots;
+                    _mainWindow.DeadRobotInformationsList.DataContext = _wpfDeadRobots;
 
                     // Start match
                     _arena.StartMatch();
@@ -145,10 +141,16 @@ namespace CSharpRobotsWPF
                     DeleteRobot(wpfRobot);
             }
 
+            // Update status
             UpdateStatus();
 
-            _wpfRobotsAliveView.Refresh();
-            _wpfRobotsDeadView.Refresh();
+            // Update alive/dead robots
+            List<WPFRobot> deadRobots = _wpfRobots.Where(x => !x.IsAlive).ToList();
+            foreach(WPFRobot robot in deadRobots)
+            {
+                _wpfDeadRobots.Insert(0, robot); // head-insertion
+                _wpfRobots.Remove(robot);
+            }
         }
 
         private void UpdateStatus()
@@ -217,8 +219,8 @@ namespace CSharpRobotsWPF
                 },
                 TargetUIElement = new Ellipse
                 {
-                    Width = 80 * _mainWindow.BattlefieldCanvas.Width / 1000.0,
-                    Height = 80 * _mainWindow.BattlefieldCanvas.Height / 1000.0,
+                    Width = 80 * _mainWindow.BattlefieldCanvas.Width / _arena.Parameters["ArenaSize"],
+                    Height = 80 * _mainWindow.BattlefieldCanvas.Height / _arena.Parameters["ArenaSize"],
                     Stroke = TargetBrush,
                     Visibility = Visibility.Hidden
                 },
@@ -248,7 +250,7 @@ namespace CSharpRobotsWPF
             lock(robot.Statistics)
                 wpfRobot.Statistics = robot.Statistics.Select(x => x).ToDictionary(x => x.Key, x => x.Value);
 
-            wpfRobot.IsAlive = robot.Damage < 100;
+            wpfRobot.IsAlive = robot.Damage < _arena.Parameters["MaxDamage"];
             if (robot.State != RobotStates.Running)
                 DeleteRobot(wpfRobot);
             else
@@ -308,32 +310,24 @@ namespace CSharpRobotsWPF
 
         private void UpdateUIPosition(FrameworkElement element, double locX, double locY)
         {
-            double posX = locX / (1000.0 / _mainWindow.BattlefieldCanvas.Width) - element.Width / 2.0;
-            double posY = locY / (1000.0 / _mainWindow.BattlefieldCanvas.Height) - element.Height / 2.0;
+            double posX = locX / (_arena.Parameters["ArenaSize"] / _mainWindow.BattlefieldCanvas.Width) - element.Width / 2.0;
+            double posY = locY / (_arena.Parameters["ArenaSize"] / _mainWindow.BattlefieldCanvas.Height) - element.Height / 2.0;
             Canvas.SetTop(element, posY);
             Canvas.SetLeft(element, posX);
         }
 
         private FrameworkElement CreateExplosionUIElement()
         {
-            //Ellipse ellipse = new Ellipse
-            //{
-            //    Width = 80*BattlefieldCanvas.Width/1000.0,
-            //    Height = 80*BattlefieldCanvas.Height/1000.0,
-            //    Fill = Explosion5Brush,
-            //    Visibility = Visibility.Hidden
-            //};
-            //return ellipse;
-            double width = 80 * _mainWindow.BattlefieldCanvas.Width / 1000.0;
-            double height = 80 * _mainWindow.BattlefieldCanvas.Height / 1000.0;
+            double width = 80 * _mainWindow.BattlefieldCanvas.Width / _arena.Parameters["ArenaSize"];
+            double height = 80 * _mainWindow.BattlefieldCanvas.Height / _arena.Parameters["ArenaSize"];
             Grid grid = new Grid
             {
                 Width = width,
                 Height = height,
                 Visibility = Visibility.Hidden
             };
-            double width5 = 10 * _mainWindow.BattlefieldCanvas.Width / 1000.0;
-            double height5 = 10 * _mainWindow.BattlefieldCanvas.Width / 1000.0;
+            double width5 = 10 * _mainWindow.BattlefieldCanvas.Width / _arena.Parameters["ArenaSize"];
+            double height5 = 10 * _mainWindow.BattlefieldCanvas.Width / _arena.Parameters["ArenaSize"];
             Ellipse ellipse5 = new Ellipse
             {
                 Width = width5,
@@ -341,8 +335,8 @@ namespace CSharpRobotsWPF
                 Fill = Explosion5Brush,
                 Visibility = Visibility.Visible,
             };
-            double width20 = 40 * _mainWindow.BattlefieldCanvas.Width / 1000.0;
-            double height20 = 40 * _mainWindow.BattlefieldCanvas.Width / 1000.0;
+            double width20 = 40 * _mainWindow.BattlefieldCanvas.Width / _arena.Parameters["ArenaSize"];
+            double height20 = 40 * _mainWindow.BattlefieldCanvas.Width / _arena.Parameters["ArenaSize"];
             Ellipse ellipse20 = new Ellipse
             {
                 Width = width20,
@@ -350,8 +344,8 @@ namespace CSharpRobotsWPF
                 Fill = Explosion20Brush,
                 Visibility = Visibility.Visible,
             };
-            double width40 = 80 * _mainWindow.BattlefieldCanvas.Width / 1000.0;
-            double height40 = 80 * _mainWindow.BattlefieldCanvas.Width / 1000.0;
+            double width40 = 80 * _mainWindow.BattlefieldCanvas.Width / _arena.Parameters["ArenaSize"];
+            double height40 = 80 * _mainWindow.BattlefieldCanvas.Width / _arena.Parameters["ArenaSize"];
             Ellipse ellipse40 = new Ellipse
             {
                 Width = width40,

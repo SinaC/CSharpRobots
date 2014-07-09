@@ -10,19 +10,9 @@ namespace Robots
     //JJRobots (c) 2000 L.Boselli - boselli@uno.it
     public class Platoon : SDK.Robot
     {
-        public override void Init()
-        {
-            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
-        }
-
-        public override void Step()
-        {
-            // NOP
-        }
-
         private static int count;
-        private static int[] cornerX = {50, 950, 950, 50};
-        private static int[] cornerY = {50, 50, 950, 950};
+        private static int[] cornerX = { 50, 950, 950, 50 };
+        private static int[] cornerY = { 50, 50, 950, 950 };
         private static int targetX = 500;
         private static int targetY = 500;
         private static int[] locX = new int[8];
@@ -33,8 +23,152 @@ namespace Robots
         private int scan;
         private int id;
 
+        private int dx, dy, angle;
 
-        public void Main()
+        public int state = 0;
+        
+        public override void Init()
+        {
+            if ((id = SDK.Id) == 0)
+            {
+                count = 1;
+                corner1 = SDK.Rand(4);
+            }
+            else
+            {
+                count = id + 1;
+            }
+            nCorner = corner1;
+            dx = cornerX[nCorner] - (locX[id] = SDK.LocX);
+            dy = cornerY[nCorner] - (locY[id] = SDK.LocY);
+            if (dx == 0)
+            {
+                angle = dy > 0 ? 90 : 270;
+            }
+            else
+            {
+                angle = SDK.ATan(dy * 100000 / dx);
+            }
+            if (dx < 0) angle += 180;
+            SDK.Drive(angle, 100);
+
+            state = 1;
+        }
+
+        public override void Step()
+        {
+            switch(state)
+            {
+                case 1:
+                    State1();
+                    break;
+                case 2:
+                    State2();
+                    break;
+                case 3:
+                    State3();
+                    break;
+                case 4:
+                    State4();
+                    break;
+            }
+        }
+
+        private void State1()
+        {
+            switch (nCorner)
+            {
+                default:
+                case 0:
+                    if (locX[id] > 150 || locY[id] > 150)
+                        fire2();
+                    else
+                        state = 2;
+                    break;
+                case 1:
+                    if (locX[id] < 850 || locY[id] > 150) 
+                        fire2();
+                    else
+                        state = 2;
+                    break;
+                case 2:
+                    if (locX[id] < 850 || locY[id] < 850) 
+                        fire2();
+                    else
+                        state = 2;
+                    break;
+                case 3:
+                    if (locX[id] > 150 || locY[id] < 850) 
+                        fire2();
+                    else
+                        state = 2;
+                    break;
+            }
+        }
+
+        private void State2()
+        {
+            SDK.Drive(0,0);
+            if (SDK.Speed >= 50)
+                fire1();
+            else
+                state = 3;
+        }
+
+        private void State3()
+        {
+            if (++nCorner == 4)
+                nCorner = 0;
+            dx = cornerX[nCorner] - SDK.LocX;
+            dy = cornerY[nCorner] - SDK.LocY;
+            if (dx == 0)
+            {
+                angle = dy > 0 ? 90 : 270;
+            }
+            else
+            {
+                angle = SDK.ATan(dy*100000/dx);
+            }
+            if (dx < 0)
+                angle += 180;
+            SDK.Drive(angle, 100);
+            state = 4;
+        }
+
+        private void State4()
+        {
+            switch (nCorner)
+            {
+                default:
+                case 0:
+                    if (locY[id] > 150)
+                        fire1();
+                    else
+                        state = 2;
+                    break;
+                case 1:
+                    if (locX[id] < 850)
+                        fire1();
+                    else
+                        state = 2;
+                    break;
+                case 2:
+                    if (locY[id] < 850)
+                        fire1();
+                    else
+                        state = 2;
+                    break;
+                case 3:
+                    if (locX[id] > 150)
+                        fire1();
+                    else
+                        state = 2;
+                    break;
+            }
+        }
+
+        /*
+        private void OriginalVersion()
         {
             if ((id = SDK.Id) == 0)
             {
@@ -55,7 +189,7 @@ namespace Robots
             }
             else
             {
-                angle = SDK.ATan(dy*100000/dx);
+                angle = SDK.ATan(dy * 100000 / dx);
             }
             if (dx < 0) angle += 180;
             SDK.Drive(angle, 100);
@@ -88,7 +222,7 @@ namespace Robots
                 }
                 else
                 {
-                    angle = SDK.ATan(dy*100000/dx);
+                    angle = SDK.ATan(dy * 100000 / dx);
                 }
                 if (dx < 0) angle += 180;
                 SDK.Drive(angle, 100);
@@ -110,6 +244,7 @@ namespace Robots
                 }
             } while (true);
         }
+        */
 
         private void fire1()
         {
