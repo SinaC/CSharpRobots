@@ -10,9 +10,9 @@ using System.Windows;
 [assembly: AssemblyTitle("CSharpRobotsWPF")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("N-ALLO")]
+[assembly: AssemblyCompany("SinaC")]
 [assembly: AssemblyProduct("CSharpRobotsWPF")]
-[assembly: AssemblyCopyright("Copyright © N-ALLO 2014")]
+[assembly: AssemblyCopyright("Copyright © SinaC 2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

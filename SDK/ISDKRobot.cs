@@ -65,9 +65,16 @@ namespace SDK
         int FriendsCount { get; }
 
         /// <summary>
-        /// Stores arena/robot parameters such as MaxSpeed, ArenaSize, ...
+        /// Stores arena/robot parameters: ArenaSize, CollisionDamage, MissileSpeed, MaxSpeed, MaxDamage, MaxResolution, MaxCannonRange, MaxAcceleration, MaxTurnSpeed, MaxExplosionRange, MaxMatchTime
         /// </summary>
         IReadOnlyDictionary<string, int> Parameters { get; }
+
+        /// <summary>
+        /// Add a line in arena log file
+        /// </summary>
+        /// <param name="format">is a composite format string that contains text intermixed with zero or more format items, which correspond to objects in the args array.</param>
+        /// <param name="args">is an object array that contains zero or more objects to format.</param>
+        void Log(string format, params object[] args);
 
         #region Math
 

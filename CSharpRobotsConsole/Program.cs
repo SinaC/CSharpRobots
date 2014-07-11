@@ -1,32 +1,33 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.ComponentModel;
-using System.Linq;
+using System.Configuration;
 using System.Threading;
-using System.Threading.Tasks;
 using Arena;
 using Common;
 using Robots;
-using Math = Common.Math;
 
 namespace CSharpRobotsConsole
 {
     class Program
     {
+        static readonly ManualResetEvent WaitStartedEvent = new ManualResetEvent(false);
+
         static void Main(string[] args)
         {
+            //
+            Log.Initialize(ConfigurationManager.AppSettings["logpath"], "robots.log");
+
             Console.SetWindowSize(80, 60);
             Console.BufferWidth = 80;
             Console.BufferHeight = 60;
 
             IReadonlyArena arena = Factory.CreateArena();
+            arena.ArenaStarted += OnArenaStarted;
             arena.ArenaStep += DisplayArena;
 
             //arena.InitializeSolo(typeof(Surveyor), 0, 500, 0, 0);
             //arena.InitializeSingleMatch(typeof(Counter), typeof(Sniper));
-            arena.InitializeSingleMatch(typeof(SinaC), typeof(Surveyor));
-            //arena.InitializeTeamMatch(typeof(Follower), typeof(Rabbit), typeof(Counter), typeof(Sniper));
+            //arena.InitializeSingleMatch(typeof(SinaC), typeof(Surveyor));
+            arena.InitializeTeamMatch(typeof(Follower), typeof(Rabbit), typeof(SinaC), typeof(Target));
             if (arena.State == ArenaStates.Error)
             {
                 Console.WriteLine("Error while initializing arena match!!!");
@@ -34,6 +35,8 @@ namespace CSharpRobotsConsole
             }
 
             arena.StartMatch();
+
+            WaitStartedEvent.WaitOne(5000);
 
             bool stopped = false;
             while (!stopped)
@@ -70,6 +73,11 @@ namespace CSharpRobotsConsole
             }
 
             System.Threading.Thread.Sleep(500);
+        }
+
+        private static void OnArenaStarted(IReadonlyArena arena)
+        {
+            WaitStartedEvent.Set();
         }
 
         private static int GetX(double x, int maxSize)
@@ -153,7 +161,7 @@ namespace CSharpRobotsConsole
                     Console.Write("+");
 
                     double destX, destY;
-                    Math.ComputePoint(missile.LaunchLocX, missile.LaunchLocY, missile.Range, missile.Heading, out destX, out destY);
+                    Common.Math.ComputePoint(missile.LaunchLocX, missile.LaunchLocY, missile.Range, missile.Heading, out destX, out destY);
                     int screenDestX = GetX(destX, arena.ArenaSize);
                     int screenDestY = GetY(destY, arena.ArenaSize);
                     Console.SetCursorPosition(screenDestX, screenDestY);

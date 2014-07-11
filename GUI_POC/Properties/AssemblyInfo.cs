@@ -10,9 +10,9 @@ using System.Windows;
 [assembly: AssemblyTitle("GUI_POC")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("N-ALLO")]
+[assembly: AssemblyCompany("SinaC")]
 [assembly: AssemblyProduct("GUI_POC")]
-[assembly: AssemblyCopyright("Copyright © N-ALLO 2014")]
+[assembly: AssemblyCopyright("Copyright © SinaC 2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

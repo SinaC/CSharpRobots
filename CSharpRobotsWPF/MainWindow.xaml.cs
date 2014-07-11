@@ -21,10 +21,6 @@ namespace CSharpRobotsWPF
 
         public MainWindow()
         {
-            ExecuteOnUIThread.Initialize();
-
-            Log.Initialize("TODO", "TODO", "TODO");
-
             InitializeComponent();
 
             _wpfArena = new WPFArena(this);

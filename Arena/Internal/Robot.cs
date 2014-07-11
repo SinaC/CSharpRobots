@@ -382,6 +382,11 @@ namespace Arena.Internal
             get { return _arena.TeamCount(this); }
         }
 
+        public void Log(string format, params object[] args)
+        {
+            Common.Log.WriteLine(Common.Log.LogLevels.Debug, String.Format("Robot {0}[{1}] : {2}", TeamName, Id, String.Format(format, args)));
+        }
+
         public IReadOnlyDictionary<string, int> Parameters
         {
             get { return ParametersSingleton.Instance.Parameters; }

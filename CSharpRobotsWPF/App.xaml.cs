@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Configuration;
 using System.Windows;
+using Common;
 
 namespace CSharpRobotsWPF
 {
@@ -12,5 +9,13 @@ namespace CSharpRobotsWPF
     /// </summary>
     public partial class App : Application
     {
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            //
+            ExecuteOnUIThread.Initialize();
+
+            //
+            Log.Initialize(ConfigurationManager.AppSettings["logpath"], "robots.log");
+        }
     }
 }

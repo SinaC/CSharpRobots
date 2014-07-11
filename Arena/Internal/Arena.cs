@@ -350,7 +350,7 @@ namespace Arena.Internal
                             robot.Initialize(userRobot, this, teamType[t].Name, i, t, x, y);
                             _robots.Add(robot);
 
-                            Log.WriteLine(Log.LogLevels.Info, "Robot {0} | {1} | {2} Type {3} created at location {4},{5}", i, t, robot.TeamName, teamType[t], x, y);
+                            Log.WriteLine(Log.LogLevels.Info, "Robot {0}[{1}] Type {2} created at location {3},{4}", robot.TeamName, robot.Id, teamType[t], x, y);
                         }
 
                     //
