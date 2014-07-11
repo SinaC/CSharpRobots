@@ -6,6 +6,9 @@ namespace SDK
 
     public interface ISDKRobot
     {
+        // Cheat
+        void CHEAT_FindNearestEnemy(out double degrees, out double range, out double x, out double y);
+
         /// <summary>
         /// Returns the damage points of the robot: 0 to 99 means alive, 100 means dead (the robot will never read this value).
         /// </summary>

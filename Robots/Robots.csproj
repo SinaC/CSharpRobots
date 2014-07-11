@@ -44,6 +44,7 @@
     <Compile Include="OldStyleNotConverted\Rook.cs" />
     <Compile Include="Follower.cs" />
     <Compile Include="OldStyleNotConverted\Sniper.cs" />
+    <Compile Include="Starkle.cs" />
     <Compile Include="Stinger.cs" />
     <Compile Include="Surveyor.cs" />
     <Compile Include="Target.cs" />

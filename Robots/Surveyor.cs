@@ -9,6 +9,8 @@
         private double _lastTime;
         private double _lastX;
         private double _lastY;
+        private double _lastSpeedX;
+        private double _lastSpeedY;
         private int _lastDamage;
         private int _previousSpeed;
 
@@ -21,6 +23,8 @@
             _lastTime = _initialTime;
             _lastX = _initX;
             _lastY = _initY;
+            _lastSpeedX = 0;
+            _lastSpeedY = 0;
             _lastDamage = 0;
             _previousSpeed = 0;
 
@@ -39,7 +43,7 @@
             //System.Diagnostics.Debug.WriteLine("Speed X:{0:0.0000} Y:{1:0.0000} - Time {2:0.0000}", speedX, speedY, diffTime);
 
             double diffLastTime = currentTime - _lastTime;
-            if (diffLastTime > 1 || _lastDamage < currentDamage)
+            if (diffLastTime > 1)// || _lastDamage < currentDamage)
             {
                 double diffTime = currentTime - _initialTime;
 
@@ -51,14 +55,19 @@
                 double actualSpeedX = (currentX - _lastX)/diffLastTime;
                 double actualSpeedY = (currentY - _lastY)/diffLastTime;
 
+                double actualAccelerationX = (actualSpeedX - _lastSpeedX) / diffLastTime;
+                double actualAccelerationY = (actualSpeedY - _lastSpeedY) / diffLastTime;
+
                 int diffSpeed = currentSpeed - _previousSpeed;
                 double acceleration = diffSpeed/diffLastTime;
 
-                System.Diagnostics.Debug.WriteLine("TICK:{0:0.00} | Loc:{1},{2} | Instant speed X:{3:0.00} Y:{4:0.00} - Elapsed {5:0.00}  diff X:{6:0.00} Y:{7:0.00}  Dmg:{8} acceleration:{9:0.00}", SDK.Time, currentX, currentY, actualSpeedX, actualSpeedY, diffTime, diffX, diffY, SDK.Damage, acceleration);
+                System.Diagnostics.Debug.WriteLine("TICK:{0:0.00} | Loc:{1},{2} | Instant speed X:{3:0.00} Y:{4:0.00} - Elapsed {5:0.00}  diff X:{6:0.00} Y:{7:0.00}  Dmg:{8} acceleration:{9:0.00}  {10:0.0000} {11:0.0000}", SDK.Time, currentX, currentY, actualSpeedX, actualSpeedY, diffTime, diffX, diffY, SDK.Damage, acceleration, actualAccelerationX, actualAccelerationY);
 
                 _lastTime = currentTime;
                 _lastX = currentX;
                 _lastY = currentY;
+                _lastSpeedX = actualSpeedX;
+                _lastSpeedY = actualSpeedY;
                 _previousSpeed = currentSpeed;
                 _lastDamage = currentDamage;
             }

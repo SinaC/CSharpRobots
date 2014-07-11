@@ -30,6 +30,7 @@ namespace Arena
 
         void InitializeSolo(Type robotType, int locX, int locY, int heading, int speed);
         void InitializeSingleMatch(Type team1, Type team2);
+        void InitializeSingleMatch(Type team1, Type team2, int locX1, int locY1, int locX2, int locY2);
         void InitializeDoubleMatch(Type team1, Type team2);
         void InitializeTeamMatch(Type team1, Type team2, Type team3, Type team4);
 

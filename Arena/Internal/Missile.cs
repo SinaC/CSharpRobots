@@ -85,7 +85,7 @@ namespace Arena.Internal
             double diffY = LocY - LaunchLocY;
             double distance = System.Math.Sqrt(diffX*diffX + diffY*diffY);
             double speed = distance/elapsed*1000.0; // in m/s
-            Log.WriteLine(Log.LogLevels.Debug, "Missile {0} target reached. Speed {1} Distance {2} Range {3}", Id, speed, distance, Range);
+            //Log.WriteLine(Log.LogLevels.Debug, "Missile {0} target reached. Speed {1} Distance {2} Range {3}", Id, speed, distance, Range);
 
             State = MissileStates.Exploding;
         }

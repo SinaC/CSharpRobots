@@ -9,7 +9,7 @@
 
         public static double ToDegrees(double radians)
         {
-            return (int)(radians * 180.0 / System.Math.PI);
+            return radians * 180.0 / System.Math.PI;
         }
 
         public static double Distance(double x1, double y1, double x2, double y2)
@@ -21,7 +21,7 @@
 
         public static void ComputePoint(double centerX, double centerY, double distance, double degrees, out double x, out double y)
         {
-            double radians = degrees * System.Math.PI / 180.0;
+            double radians = ToRadians(degrees);
             x = centerX + distance * System.Math.Cos(radians);
             y = centerY + distance * System.Math.Sin(radians);
         }
@@ -58,8 +58,8 @@
             // Simulate a triangle bigger than sector and check on that triangle
             const double arbitratryLength = 2000.0; // greater than battlefield
 
-            double angleFromDegrees = (degrees - resolution / 2.0);
-            double angleToDegrees = (degrees + resolution / 2.0);
+            double angleFromDegrees = degrees - (resolution / 2.0);
+            double angleToDegrees = degrees + (resolution / 2.0);
 
             double pointFromX, pointFromY;
             ComputePoint(centerX, centerY, arbitratryLength, angleFromDegrees, out pointFromX, out pointFromY);

@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Common;
 using SDK;
-using Math = System.Math;
 
 namespace Arena.Internal
 {
@@ -33,8 +32,8 @@ namespace Arena.Internal
         private double _currentDistance; // Distance traveled in this heading
         public Tick LastMissileLaunchTick { get; private set; }
 
-        public double RawLocX { get; private set; }
-        public double RawLocY { get; private set; }
+        public double LocX { get; private set; }
+        public double LocY { get; private set; }
 
         public RobotStatistics Statistics { get; private set; }
 
@@ -60,8 +59,8 @@ namespace Arena.Internal
             TeamName = teamName;
             Id = id;
             Team = team;
-            RawLocX = locX;
-            RawLocY = locY;
+            LocX = locX;
+            LocY = locY;
             _damage = 0;
             Speed = speed;
 
@@ -74,7 +73,7 @@ namespace Arena.Internal
 
             State = RobotStates.Initialized;
 
-            Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} initialized.", Id, Team);
+            Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0}[{1}] initialized.", TeamName, Id);
         }
 
         public void Start(Tick matchStart, CountdownEvent syncCountdownEvent)
@@ -90,11 +89,11 @@ namespace Arena.Internal
                 _cancellationTokenSource = new CancellationTokenSource();
                 _mainTask = Task.Factory.StartNew(MainLoop, _cancellationTokenSource.Token);
 
-                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} started.", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0}[{1}] started.", TeamName, Id);
             }
             catch (Exception ex)
             {
-                Common.Log.WriteLine(Common.Log.LogLevels.Error, "Exception while starting Robot {0} | {1}. {2}", Id, Team, ex);
+                Common.Log.WriteLine(Common.Log.LogLevels.Error, "Exception while starting Robot {0}[{1}]. {2}", TeamName, Id, ex);
             }
         }
 
@@ -106,7 +105,7 @@ namespace Arena.Internal
 
             try
             {
-                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} stopping.", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0}[{1}] stopping.", TeamName, Id);
                 State = RobotStates.Stopping;
 
                 _cancellationTokenSource.Cancel();
@@ -119,11 +118,11 @@ namespace Arena.Internal
                 foreach (Exception inner in ex.InnerExceptions)
                 {
                     if (inner is TaskCanceledException)
-                        Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} cancelled successfully.", Id, Team);
+                        Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0}[{1}] cancelled successfully.", TeamName, Id);
                     else if (inner is ThreadAbortException)
-                        Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} aborted successfully.", Id, Team);
+                        Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0}[{1}] aborted successfully.", TeamName, Id);
                     else
-                        Common.Log.WriteLine(Common.Log.LogLevels.Info, "Exception while stopping Robot {0} | {1}. {2}", Id, Team, ex);
+                        Common.Log.WriteLine(Common.Log.LogLevels.Info, "Exception while stopping Robot {0}[{1}]. {2}", TeamName, Id, ex);
                 }
             }
             finally
@@ -131,7 +130,7 @@ namespace Arena.Internal
                 State = RobotStates.Stopped;
                 _mainTask = null;
 
-                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} stopped.", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0}[{1}] stopped.", TeamName, Id);
             }
         }
 
@@ -142,7 +141,7 @@ namespace Arena.Internal
             {
                 if (Speed > _desiredSpeed) // Slowing
                 {
-                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} slowing. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] slowing. Speed {2} Desired Speed {3} Acceleration {4}", TeamName, Id, Speed, _desiredSpeed, _acceleration);
 
                     _acceleration -= ((ParametersSingleton.MaxAcceleration*realStepTime)/1000.0)*(100.0/ParametersSingleton.MaxSpeed);
                     if (_acceleration < _desiredSpeed)
@@ -153,11 +152,11 @@ namespace Arena.Internal
                     else
                         Speed = (int)_acceleration;
 
-                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} slowed. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] slowed. Updated Speed {2} Desired Speed {3} Acceleration {4}", TeamName, Id, Speed, _desiredSpeed, _acceleration);
                 }
                 else // Accelerating
                 {
-                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} accelerating. Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] accelerating. Speed {2} Desired Speed {3} Acceleration {4}", TeamName, Id, Speed, _desiredSpeed, _acceleration);
 
                     _acceleration += ((ParametersSingleton.MaxAcceleration*realStepTime)/1000.0)*(100.0/ParametersSingleton.MaxSpeed);
                     if (_acceleration > _desiredSpeed)
@@ -168,7 +167,7 @@ namespace Arena.Internal
                     else
                         Speed = (int)_acceleration;
 
-                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} accelerated. Updated Speed {2} Desired Speed {3} Acceleration {4}", Id, Team, Speed, _desiredSpeed, _acceleration);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] accelerated. Updated Speed {2} Desired Speed {3} Acceleration {4}", TeamName, Id, Speed, _desiredSpeed, _acceleration);
                 }
             }
         }
@@ -178,20 +177,20 @@ namespace Arena.Internal
             // Update heading, allow change below a certain speed
             if (Heading != _desiredHeading)
             {
-                //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} updating heading. Heading {2} Desired Heading {3} RawLocX {4} RawLocY {5} Speed {6}", Id, Team, Heading, _desiredHeading, RawLocX, RawLocY, Speed);
+                //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] updating heading. Heading {2} Desired Heading {3} LocX {4} LocY {5} Speed {6}", TeamName, Id, Heading, _desiredHeading, LocX, LocY, Speed);
 
                 if (Speed <= ParametersSingleton.MaxTurnSpeed)
                 {
                     Heading = _desiredHeading;
                     _currentDistance = 0;
-                    _originX = RawLocX;
-                    _originY = RawLocY;
+                    _originX = LocX;
+                    _originY = LocY;
 
-                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} heading updated. Heading {2} Desired Heading {3} OriginX {4} OriginY {5} Speed {6}", Id, Team, Heading, _desiredHeading, _originX, _originY, Speed);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] heading updated. Heading {2} Desired Heading {3} OriginX {4} OriginY {5} Speed {6}", TeamName, Id, Heading, _desiredHeading, _originX, _originY, Speed);
                 }
                 else
                 {
-                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} moving too fast, cannot update Heading", Id, Team);
+                    //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] moving too fast, cannot update Heading", TeamName, Id);
                     _desiredSpeed = 0;
                 }
             }
@@ -207,10 +206,10 @@ namespace Arena.Internal
                 _currentDistance += ((ParametersSingleton.MaxSpeed * Speed / 100.0) * realStepTime) / 1000.0;
                 double newX, newY;
                 Common.Math.ComputePoint(_originX, _originY, _currentDistance, Heading, out newX, out newY);
-                RawLocX = newX;
-                RawLocY = newY;
+                LocX = newX;
+                LocY = newY;
 
-                //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} location updated. CurrentDistance {2} OriginX {3} OriginY {4} RawLocX {5} RawLocY {6} Heading {7} Speed {8}", Id, Team, _currentDistance, _originX, _originY, RawLocX, RawLocY, Heading, Speed);
+                //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] location updated. CurrentDistance {2} OriginX {3} OriginY {4} LocX {5} LocY {6} Heading {7} Speed {8}", TeamName, Id, _currentDistance, _originX, _originY, LocX, LocY, Heading, Speed);
             }
         }
 
@@ -218,11 +217,11 @@ namespace Arena.Internal
         {
             Statistics.Increment("DAMAGE_TAKEN");
             Damage += damage;
-            Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1} takes {2} damage => {3} total damage", Id, Team, damage, Damage);
+            //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] takes {2} damage => {3} total damage", TeamName, Id, damage, Damage);
             if (Damage >= ParametersSingleton.MaxDamage)
             {
                 State = RobotStates.Destroyed;
-                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} destroyed", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0}[{1}] destroyed", TeamName, Id);
             }
         }
 
@@ -238,29 +237,13 @@ namespace Arena.Internal
         {
             Statistics.Increment("COLLISION_WALL");
             Collision(damage);
-            RawLocX = newLocX;
-            RawLocY = newLocY;
+            LocX = newLocX;
+            LocY = newLocY;
         }
 
         #region IReadonlyRobot + ISDKRobot
 
         public int Id { get; private set; }
-
-        public int LocX
-        {
-            get
-            {
-                return (int)RawLocX;
-            }
-        }
-
-        public int LocY
-        {
-            get
-            {
-                return (int)RawLocY;
-            }
-        }
 
         public int Damage
         {
@@ -282,6 +265,22 @@ namespace Arena.Internal
 
         public RobotStates State { get; private set; }
 
+        int IReadonlyRobot.LocX
+        {
+            get
+            {
+                return (int)System.Math.Round(LocX);
+            }
+        }
+
+        int IReadonlyRobot.LocY
+        {
+            get
+            {
+                return (int)System.Math.Round(LocY);
+            }
+        }
+
         public int Team { get; private set; }
 
         public string TeamName { get; private set; }
@@ -299,6 +298,28 @@ namespace Arena.Internal
 
         #region ISDKRobot
 
+        public void CHEAT_FindNearestEnemy(out double degrees, out double range, out double x, out double y)
+        {
+            _arena.CHEAT_FindNearestEnemy(this, out degrees, out range, out x, out y);
+        }
+
+
+        int ISDKRobot.LocX
+        {
+            get
+            {
+                return (int)LocX;
+            }
+        }
+
+        int ISDKRobot.LocY
+        {
+            get
+            {
+                return (int)LocY;
+            }
+        }
+
         public double Time
         {
             get
@@ -312,7 +333,7 @@ namespace Arena.Internal
             Statistics.Increment("CANNON");
 
             // not needed anymore Thread.Sleep(1); // give time to others
-            //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}. Cannon {2} {3}.", Id, Team, degrees, range);
+            //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}]. Cannon {2} {3}.", TeamName, Id, degrees, range);
             if (_damage > 100) // too damaged
                 return 0;
 
@@ -336,7 +357,7 @@ namespace Arena.Internal
         {
             Statistics.Increment("DRIVE");
             // not needed anymore Thread.Sleep(1); // give time to others
-            //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}. Drive {2} {3}.", Id, Team, degrees, speed);
+            //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}]. Drive {2} {3}.", TeamName, Id, degrees, speed);
 
             degrees = FixDegrees(degrees);
             speed = FixSpeed(speed);
@@ -351,7 +372,7 @@ namespace Arena.Internal
             Statistics.Increment("SCAN");
 
             // not needed anymore Thread.Sleep(1); // give time to others
-            //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}. Scan {2} {3}.", Id, Team, degrees, resolution);
+            //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}]. Scan {2} {3}.", TeamName, Id, degrees, resolution);
             if (_damage > 100) // too damaged
                 return 0;
 
@@ -380,52 +401,52 @@ namespace Arena.Internal
 
         public int Sqrt(int value)
         {
-            return (int) Math.Sqrt(value);
+            return (int) System.Math.Sqrt(value);
         }
 
         public int Sin(int degrees)
         {
-            return (int) (Math.Sin(Common.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
+            return (int) (System.Math.Sin(Common.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
         }
 
         public int Cos(int degrees)
         {
-            return (int) (Math.Cos(Common.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
+            return (int) (System.Math.Cos(Common.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
         }
 
         public int Tan(int degrees)
         {
-            return (int) (Math.Tan(Common.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
+            return (int) (System.Math.Tan(Common.Math.ToRadians(degrees))*ParametersSingleton.TrigonometricBias);
         }
 
         public int ATan(int value)
         {
-            return (int) Common.Math.ToDegrees(Math.Atan(value/ParametersSingleton.TrigonometricBias));
+            return (int) Common.Math.ToDegrees(System.Math.Atan(value/ParametersSingleton.TrigonometricBias));
         }
 
         public double Sqrt(double value)
         {
-            return Math.Sqrt(value);
+            return System.Math.Sqrt(value);
         }
 
         public double Sin(double radians)
         {
-            return Math.Sin(radians);
+            return System.Math.Sin(radians);
         }
 
         public double Cos(double radians)
         {
-            return Math.Cos(radians);
+            return System.Math.Cos(radians);
         }
 
         public double Tan(double radians)
         {
-            return Math.Tan(radians);
+            return System.Math.Tan(radians);
         }
 
         public double ATan(double value)
         {
-            return Math.Atan(value);
+            return System.Math.Atan(value);
         }
 
         public double Deg2Rad(double degrees)
@@ -440,27 +461,27 @@ namespace Arena.Internal
 
         public double Abs(double value)
         {
-            return Math.Abs(value);
+            return System.Math.Abs(value);
         }
 
         public double Round(double value)
         {
-            return Math.Round(value);
+            return System.Math.Round(value);
         }
 
         public double Exp(double power)
         {
-            return Math.Exp(power);
+            return System.Math.Exp(power);
         }
 
         public double Log(double value)
         {
-            return Math.Log(value);
+            return System.Math.Log(value);
         }
 
         public double ATan2(double y, double x)
         {
-            return Math.Atan2(y, x);
+            return System.Math.Atan2(y, x);
         }
 
         #endregion
@@ -475,14 +496,14 @@ namespace Arena.Internal
                 // So, we have to abort the thread even if it's not recommended
                 //using (_cancellationTokenSource.Token.Register(Thread.CurrentThread.Abort))
                 {
-                    Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}  signaling/waiting CountdownEvent", Id, Team);
+                    Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}]  signaling/waiting CountdownEvent", TeamName, Id);
                     // Decrement CountdownEvent and wait on it until every robot has started
                     if (!_syncCountdownEvent.Signal())
                     {
-                        Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}  waiting other robots", Id, Team);
+                        Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}]  waiting other robots", TeamName, Id);
                         _syncCountdownEvent.Wait();
                     }
-                    Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0} | {1}  every robot has been signaled", Id, Team);
+                    Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}]  every robot has been signaled", TeamName, Id);
 
                     Stopwatch sw = new Stopwatch();
 
@@ -520,17 +541,17 @@ namespace Arena.Internal
             }
             catch (ThreadAbortException)
             {
-                Common.Log.WriteLine(Common.Log.LogLevels.Info, "ThreadAbortException with Robot {0} | {1}.", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "ThreadAbortException with Robot {0}[{1}].", TeamName, Id);
             }
             catch (Exception ex)
             {
-                Common.Log.WriteLine(Common.Log.LogLevels.Error, "Exception with Robot {0} | {1}. {2}", Id, Team, ex);
+                Common.Log.WriteLine(Common.Log.LogLevels.Error, "Exception with Robot {0}[{1}]. {2}", TeamName, Id, ex);
             }
             finally
             {
                 State = RobotStates.Stopped;
 
-                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0} | {1} task stopped.", Id, Team);
+                Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0}[{1}] task stopped.", TeamName, Id);
             }
         }
         

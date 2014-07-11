@@ -57,12 +57,13 @@ namespace CSharpRobotsWPF
                 //Type robot1 = LoadRobots.LoadRobotFromPath(@"D:\GITHUB\CSharpRobots\Robots\bin\Debug\", "SinaC");
                 //_arena.InitializeSolo(robot1, 0, 500, 0, 0);
                 //_arena.InitializeSolo(typeof(Robots.SinaC), 0, 500, 0, 0);
-                //_arena.InitializeSingleMatch(typeof (Robots.SinaC), typeof (Robots.HHRobot));
+                //_arena.InitializeSingleMatch(typeof (Robots.Starkle), typeof (Robots.Rabbit));
+                _arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Surveyor), 500, 500, 50, 150);
                 //_arena.InitializeSingleMatch(typeof(Robots.Phalanx), typeof(Robots.Stinger));
                 //_arena.InitializeSingleMatch(typeof(Robots.Platoon), typeof(Robots.Stinger));
                 //_arena.InitializeSingleMatch(_robotTypes.FirstOrDefault(x => x.TeamName.Contains("Phalanx")), _robotTypes.FirstOrDefault(x => x.TeamName.Contains("SinaC")));
-                //_arena.InitializeDoubleMatch(typeof(Robots.Platoon), typeof(Robots.Stinger));
-                _arena.InitializeTeamMatch(typeof(Robots.SinaC), typeof(Robots.HHRobot), typeof(Robots.Stinger), typeof(Robots.Platoon));
+                //_arena.InitializeDoubleMatch(typeof(Robots.SinaC), typeof(Robots.Stinger));
+                //_arena.InitializeTeamMatch(typeof(Robots.SinaC), typeof(Robots.HHRobot), typeof(Robots.Stinger), typeof(Robots.Platoon));
 
                 if (_arena.State == ArenaStates.Error)
                     _mainWindow.StatusText.Text = "Error while creating match";

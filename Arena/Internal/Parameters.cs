@@ -31,8 +31,8 @@ namespace Arena.Internal
         public const int MissileSpeed = 300; // in m/s
         // Robot
         public const double TrigonometricBias = 100000;
-        public const double MaxSpeed = 30; // in m/s
-        public const int MaxDamage = 100;
+        public const int MaxSpeed = 30; // in m/s
+        public const int MaxDamage = 10000;
         public const int MaxResolution = 20; // in degrees
         public const int MaxCannonRange = 700; // in meters
         public const int MaxAcceleration = 5; // acceleration factor in m/s
@@ -43,10 +43,11 @@ namespace Arena.Internal
         {
             _parameters = new Dictionary<string, int>
                 {
+                    {"TrigonometricBias", (int)TrigonometricBias},
                     {"ArenaSize", ArenaSize},
                     {"CollisionDamage", CollisionDamage},
                     {"MissileSpeed", MissileSpeed},
-                    {"MaxSpeed", (int)MaxSpeed},
+                    {"MaxSpeed", MaxSpeed},
                     {"MaxDamage", MaxDamage},
                     {"MaxResolution", MaxResolution},
                     {"MaxCannonRange", MaxCannonRange},
