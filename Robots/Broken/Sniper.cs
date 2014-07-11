@@ -1,8 +1,9 @@
 ﻿using SDK;
 
-namespace Robots
+namespace Robots.Broken
 {
     // TODO: convert
+    [Broken]
     public class Sniper : Robot
     {
         public override void Init()

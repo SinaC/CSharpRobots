@@ -15,12 +15,19 @@ namespace CSharpRobotsWPF
             foreach (string file in Directory.EnumerateFiles(path, "*.dll"))
             {
                 Assembly assembly = Assembly.LoadFile(file);
-
-                foreach (Type type in assembly.GetExportedTypes().Where(x => x.IsSubclassOf(robotSDKType)))
-                {
-                    types.Add(type);
-                }
+                if (assembly != null)
+                    types.AddRange(assembly.GetExportedTypes().Where(x => x.IsSubclassOf(robotSDKType) && !x.IsDefined(typeof(SDK.BrokenAttribute))));
             }
+            return types;
+        }
+
+        public static List<Type> LoadRobotsFromFile(string filename)
+        {
+            List<Type> types = new List<Type>();
+            Type robotSDKType = typeof (SDK.Robot);
+            Assembly assembly = Assembly.LoadFile(filename);
+            if (assembly != null)
+                types.AddRange(assembly.GetExportedTypes().Where(x => x.IsSubclassOf(robotSDKType) && !x.IsDefined(typeof(SDK.BrokenAttribute))));
             return types;
         }
 
@@ -32,7 +39,7 @@ namespace CSharpRobotsWPF
             {
                 Assembly assembly = Assembly.LoadFile(file);
 
-                Type type = assembly.GetExportedTypes().FirstOrDefault(x => x.Name == robotName && x.IsSubclassOf(robotSDKType));
+                Type type = assembly.GetExportedTypes().FirstOrDefault(x => x.Name == robotName && x.IsSubclassOf(robotSDKType) && !x.IsDefined(typeof(SDK.BrokenAttribute)));
                 if (type != null)
                     return type;
             }

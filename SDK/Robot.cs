@@ -7,6 +7,8 @@
         /// </summary>
         public ISDKRobot SDK { get; set; }
 
+        public ISDKCheat Cheat { get; set; }
+
         //public abstract void Main();
 
         /// <summary>

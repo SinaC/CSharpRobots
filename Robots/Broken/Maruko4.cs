@@ -1,7 +1,10 @@
-﻿namespace Robots
+﻿using SDK;
+
+namespace Robots.Broken
 {
     // TODO: convert
     // Found on JJRobots
+    [Broken]
     public class Maruko4 : SDK.Robot
     {
         public override void Init()

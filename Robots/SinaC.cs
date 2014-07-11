@@ -223,13 +223,13 @@ namespace Robots
                     ComputePoint(SDK.LocX, SDK.LocY, preciseRange, preciseAngle, out enemyX, out enemyY);
                     if (!IsFriendlyTarget(enemyX, enemyY))
                     {
-                        double cheatAngle, cheatRange, cheatX, cheatY;
-                        SDK.CHEAT_FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
+                        //double cheatAngle, cheatRange, cheatX, cheatY;
+                        //Cheat.CHEAT_FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
 
                         angle = preciseAngle;
                         range = preciseRange;
 
-                        System.Diagnostics.Debug.WriteLine(" CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
+                        //System.Diagnostics.Debug.WriteLine(" CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
                         //System.Diagnostics.Debug.WriteLine("NORMAL A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}  RAW A:{4:0.0000} R:{5:0.0000} X:{6:0.0000} Y:{7:0.0000}", angle, range, enemyX, enemyY, a, r, rawEnemyX, rawEnemyY);
                         System.Diagnostics.Debug.WriteLine("NORMAL A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", angle, range, enemyX, enemyY);
 

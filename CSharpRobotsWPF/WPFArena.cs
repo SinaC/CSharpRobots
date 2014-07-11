@@ -47,28 +47,45 @@ namespace CSharpRobotsWPF
 
         public void StartStop()
         {
+            // Test mode without selection needed
+            StartStopInternal(arena => arena.InitializeSingleMatch(typeof (Robots.SinaC), typeof (Robots.Surveyor), 500, 500, 50, 150));
+        }
+
+        public void StartSolo(Type type)
+        {
+            StartStopInternal(arena => arena.InitializeSolo(type, 500, 500, 50, 150));
+        }
+
+        public void StartSingle(Type robot1, Type robot2)
+        {
+            StartStopInternal(arena => arena.InitializeSingleMatch(robot1, robot2));
+        }
+
+        public void StartDouble(Type robot1, Type robot2)
+        {
+            StartStopInternal(arena => arena.InitializeDoubleMatch(robot1, robot2));
+        }
+
+        public void StartTeam(Type robot1, Type robot2, Type robot3, Type robot4)
+        {
+            StartStopInternal(arena => arena.InitializeTeamMatch(robot1, robot2, robot3, robot4));
+        }
+
+        private void StartStopInternal(Action<IReadonlyArena> initializeArenaAction)
+        {
             if (_arena == null)
                 return;
             if (_arena.State == ArenaStates.Running)
                 _arena.StopMatch();
             else
             {
-                // Initialize robots
-                //Type robot1 = LoadRobots.LoadRobotFromPath(@"D:\GITHUB\CSharpRobots\Robots\bin\Debug\", "SinaC");
-                //_arena.InitializeSolo(robot1, 0, 500, 0, 0);
-                //_arena.InitializeSolo(typeof(Robots.SinaC), 0, 500, 0, 0);
-                //_arena.InitializeSingleMatch(typeof (Robots.Starkle), typeof (Robots.Rabbit));
-                _arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Surveyor), 500, 500, 50, 150);
-                //_arena.InitializeSingleMatch(typeof(Robots.Phalanx), typeof(Robots.Stinger));
-                //_arena.InitializeSingleMatch(typeof(Robots.Platoon), typeof(Robots.Stinger));
-                //_arena.InitializeSingleMatch(_robotTypes.FirstOrDefault(x => x.TeamName.Contains("Phalanx")), _robotTypes.FirstOrDefault(x => x.TeamName.Contains("SinaC")));
-                //_arena.InitializeDoubleMatch(typeof(Robots.SinaC), typeof(Robots.Stinger));
-                //_arena.InitializeTeamMatch(typeof(Robots.SinaC), typeof(Robots.HHRobot), typeof(Robots.Stinger), typeof(Robots.Platoon));
-
                 if (_arena.State == ArenaStates.Error)
                     _mainWindow.StatusText.Text = "Error while creating match";
                 else
                 {
+                    // Initialize
+                    initializeArenaAction(_arena);
+
                     // Create WPF robots
                     _mainWindow.BattlefieldCanvas.Children.Clear();
                     _wpfMissiles = new ObservableCollection<WPFMissile>();

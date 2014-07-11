@@ -1,9 +1,10 @@
 ﻿using SDK;
 
-namespace Robots
+namespace Robots.Broken
 {
     // TODO: convert
     // Rook scans the battlefield like a rook, i.e., only 0,90,180,270; move horizontally only, but looks horz and vertically
+    [Broken]
     public class Rook : Robot
     {
         public override void Init()

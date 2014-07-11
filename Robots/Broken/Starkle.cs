@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SDK;
+﻿using SDK;
 
-namespace Robots
+namespace Robots.Broken
 {
     // TODO: doesn't work
+    [Broken]
     public class Starkle : SDK.Robot
     {
         private const double tick = 0.1D;

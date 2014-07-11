@@ -33,18 +33,18 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="OldStyleNotConverted\Counter.cs" />
+    <Compile Include="Broken\Counter.cs" />
     <Compile Include="CrazyCannon.cs" />
     <Compile Include="HHRobot.cs" />
-    <Compile Include="OldStyleNotConverted\Maruko4.cs" />
-    <Compile Include="OldStyleNotConverted\Phalanx.cs" />
+    <Compile Include="Broken\Maruko4.cs" />
+    <Compile Include="Broken\Phalanx.cs" />
     <Compile Include="Platoon.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rabbit.cs" />
-    <Compile Include="OldStyleNotConverted\Rook.cs" />
+    <Compile Include="Broken\Rook.cs" />
     <Compile Include="Follower.cs" />
-    <Compile Include="OldStyleNotConverted\Sniper.cs" />
-    <Compile Include="Starkle.cs" />
+    <Compile Include="Broken\Sniper.cs" />
+    <Compile Include="Broken\Starkle.cs" />
     <Compile Include="Stinger.cs" />
     <Compile Include="Surveyor.cs" />
     <Compile Include="Target.cs" />

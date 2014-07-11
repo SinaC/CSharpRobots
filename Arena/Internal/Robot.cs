@@ -8,7 +8,7 @@ using SDK;
 
 namespace Arena.Internal
 {
-    internal class Robot : ISDKRobot, IReadonlyRobot
+    internal class Robot : ISDKRobot, ISDKCheat, IReadonlyRobot
     {
         private CancellationTokenSource _cancellationTokenSource;
         //private readonly ManualResetEvent _stopEvent;
@@ -55,6 +55,7 @@ namespace Arena.Internal
         {
             _userRobot = userRobot;
             _userRobot.SDK = this;
+            //_userRobot.Cheat = this; // uncomment this to activate cheats
             _arena = arena;
             TeamName = teamName;
             Id = id;
@@ -298,12 +299,6 @@ namespace Arena.Internal
 
         #region ISDKRobot
 
-        public void CHEAT_FindNearestEnemy(out double degrees, out double range, out double x, out double y)
-        {
-            _arena.CHEAT_FindNearestEnemy(this, out degrees, out range, out x, out y);
-        }
-
-
         int ISDKRobot.LocX
         {
             get
@@ -485,6 +480,15 @@ namespace Arena.Internal
         }
 
         #endregion
+
+        #endregion
+
+        #region ISDKCheat
+
+        public void CHEAT_FindNearestEnemy(out double degrees, out double range, out double x, out double y)
+        {
+            _arena.CHEAT_FindNearestEnemy(this, out degrees, out range, out x, out y);
+        }
 
         #endregion
 

@@ -1,9 +1,10 @@
-﻿using System;
+﻿using SDK;
 
-namespace Robots
+namespace Robots.Broken
 {
     // TODO: convert
     //JJRobots (c) 2000 L.Boselli - boselli@uno.it
+    [Broken]
     public class Phalanx : SDK.Robot
     {
         public override void Init()
