@@ -16,6 +16,8 @@ namespace Robots
     // No specific behavior on double or team match except avoiding friendly fire
     public class SinaC : Robot
     {
+        public static readonly bool Move = true;
+        public static readonly bool TryUpgradedPrecision = false;
         public static readonly double Epsilon = 0.00001;
 
         public static readonly int BorderSize = 30;
@@ -62,7 +64,8 @@ namespace Robots
 
             UpdateSharedInformations(SDK.LocX, SDK.LocY, SDK.Damage);
 
-            //MoveRandomly();
+            if (Move)
+                MoveRandomly();
             FireOnEnemy();
             _previousSuccessfulShootTime = SDK.Time;
         }
@@ -88,7 +91,8 @@ namespace Robots
                     _previousSuccessfulShootTime = SDK.Time;
             }
 
-            //AvoidBorders();
+            if (Move)
+                AvoidBorders();
 
             int currentDamage = SDK.Damage;
             if (elapsedTime > 2 )//|| currentDamage > _previousDamage) // 2 seconds since last move or damaged
@@ -96,7 +100,8 @@ namespace Robots
                 //System.Diagnostics.Debug.WriteLine("{0:HH:mm:ss.fff} - SINAC - MOVE RANDOMLY FROM LOCATION {1} : {2},{3}  Damaged:{4}", DateTime.Now, _id, SDK.LocX, SDK.LocY, currentDamage > _previousDamage);
 
                 // Change direction
-                //MoveRandomly();
+                if (Move)
+                    MoveRandomly();
 
                 //
                 _previousTime = currentTime;
@@ -199,19 +204,22 @@ namespace Robots
                 // Try to get more precision by scanning 1 degree before and 1 degree after with double resolution and weight 1/8
                 double preciseRange = r;
                 double preciseAngle = a;
-                if (r > 0)
+                if (TryUpgradedPrecision)
                 {
-                    int rBefore = SDK.Scan(a - 1, 2);
-                    int rAfter = SDK.Scan(a + 1, 2);
-                    if (rBefore > 0)
+                    if (r > 0)
                     {
-                        preciseRange = (7.0 * r + rBefore) / 8.0;
-                        preciseAngle = a - 0.125;
-                    }
-                    else if (rAfter > 0)
-                    {
-                        preciseRange = (7.0 * r + rAfter) / 8.0;
-                        preciseAngle = a + 0.125;
+                        int rBefore = SDK.Scan(a - 1, 2);
+                        int rAfter = SDK.Scan(a + 1, 2);
+                        if (rBefore > 0)
+                        {
+                            preciseRange = (7.0*r + rBefore)/8.0;
+                            preciseAngle = a - 0.125;
+                        }
+                        else if (rAfter > 0)
+                        {
+                            preciseRange = (7.0*r + rAfter)/8.0;
+                            preciseAngle = a + 0.125;
+                        }
                     }
                 }
 
