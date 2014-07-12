@@ -1,19 +1,16 @@
 ﻿using System;
-using System.Runtime.Remoting.Messaging;
 using SDK;
 
 // TODO: 
 //  when switching enemy, reset enemy speed and no distance limit
-//  smart movement strategy
-//      when only one target, stay at 700 from target
-//      otherwise, move randomly
+//  try to focus on the same enemy even if a nearest enemy is found
 //  share target infos, store every enemy around
 //      if multiple friend can shoot the same enemy, shoot this enemy first
 
 namespace Robots
 {
     // Fire on target, using linear interpolation to predict target position
-    // Move randomly, change direction every 2 seconds or when hit
+    // Move to center if stopped, move to enemy if damage is low, move drunk otherwise
     // No specific behavior on double or team match except avoiding friendly fire
     public class SinaC : Robot
     {
@@ -295,7 +292,7 @@ namespace Robots
         // Go to center if speed is 0
         // If single match and target has taken more damage than I, drive full speed on target and fire without range restriction (aka suicide)
         // Else if distance to target is almost max cannon range, lurk around target and fire
-        // Else move pseudo randomly
+        // Else, move pseudo randomly (if near wall, go to center; if too fast, slow down; if being hit recently, anticipate next hit and move to avoid shoot
         private void MoveSmartly()
         {
             // Go to center if Speed is 0 at full speed
@@ -319,8 +316,8 @@ namespace Robots
             double diffX = _arenaSize/2.0 - SDK.LocX;
             double diffY = _arenaSize/2.0 - SDK.LocY;
             _goToAngle = SDK.Rad2Deg(SDK.ATan2(diffY, diffX));
-            SDK.Drive((int)_goToAngle, 1000);
-            SDK.Log("Go to center {0:0.00}", _goToAngle);
+            SDK.Drive((int)_goToAngle, 100);
+            SDK.Log("Go to center {0:0.00} {1}", _goToAngle, SDK.Speed);
         }
 
         private void Suicide()
@@ -328,7 +325,7 @@ namespace Robots
             _goToAngle = _currentEnemyAngle;
             SDK.Drive((int)_goToAngle, 100);
             _noMinDistanceLimit = true;
-            SDK.Log("Leeeerooooyyyyyyyyy {0:0.00}", _goToAngle);
+            SDK.Log("Leeeerooooyyyyyyyyy {0:0.00} {1}", _goToAngle, SDK.Speed);
         }
 
         private void Lurk()
@@ -339,45 +336,46 @@ namespace Robots
         private void DrunkWalk()
         {
             double distanceToTarget = Distance(SDK.LocX, SDK.LocY, _currentEnemyX, _currentEnemyY);
-            double timeMultiplier = 1.0;
+            double timeMultiplier = 1.0; // move less often when far from target
             if (distanceToTarget > 300.0)
                 timeMultiplier = 2.0;
             else if (distanceToTarget > 600.0)
                 timeMultiplier = 3.0;
             double distanceToWall = SmallestDistanceToWall(SDK.LocX, SDK.LocY);
-            if (SDK.Speed > 50)
+            if (SDK.Speed > 50) // Slow down without changing direction
             {
-                if (SDK.Time - _lastDrunkTurnTime < 0.45D * timeMultiplier && distanceToWall > 30.0)
+                if (SDK.Time - _lastDrunkTurnTime < 0.45 * timeMultiplier && distanceToWall > 30.0)
                     return;
                 SDK.Drive((int)_goToAngle, 50);
-                SDK.Log("DRUNK: Drive to angle {0:0.00}", _goToAngle);
+                SDK.Log("DRUNK: Slow down {0:0.00} {1}", _goToAngle, SDK.Speed);
                 return;
             }
-            if (distanceToWall < 30.0D)
+            if (distanceToWall < 30.0D) // escape from wall
             {
                 double diffX = _arenaSize / 2.0 - SDK.LocX;
                 double diffY = _arenaSize / 2.0 - SDK.LocY;
                 _goToAngle = SDK.Rad2Deg(SDK.ATan2(diffY, diffX));
                 SDK.Drive((int)_goToAngle, 100);
                 _lastDrunkTurnTime = SDK.Time;
-                SDK.Log("DRUNK: Too close from wall, go to center {0:0.00}", _goToAngle);
+                SDK.Log("DRUNK: Too close from wall, go to center {0:0.00} {1}", _goToAngle, SDK.Speed);
                 return;
             }
+            // check if being hit or didn't turn too recently
             double t0 = _estimatedEnemyShotTime - (int)_estimatedEnemyShotTime; // [0, 1[
             double t1 = SDK.Time - (int)SDK.Time; // [0, 1[
             double diffT = SDK.Abs(t0 - t1); // estimate when I have to turn to avoid next shoot
-            if ((diffT < 0.05D || diffT > 0.95D) && (SDK.Time - _lastDrunkTurnTime) > 0.5D)
+            if ((diffT < 0.05D || diffT > 0.95) && SDK.Time - _lastDrunkTurnTime > 0.5)
             {
                 int i = SDK.Rand(2);
                 if (i == 0)
                 {
                     _goToAngle += 90.0;
-                    SDK.Log("DRUNK: Turning +1/4 {0:0.00}", _goToAngle);
+                    SDK.Log("DRUNK: Turning +1/4 {0:0.00} {1}", _goToAngle, SDK.Speed);
                 }
                 else
                 {
                     _goToAngle -= 90.0;
-                    SDK.Log("DRUNK: Turning -1/4 {0:0.00}", _goToAngle);
+                    SDK.Log("DRUNK: Turning -1/4 {0:0.00} {1}", _goToAngle, SDK.Speed);
                 }
                 SDK.Drive((int)_goToAngle, 100);
                 _lastDrunkTurnTime = SDK.Time;
