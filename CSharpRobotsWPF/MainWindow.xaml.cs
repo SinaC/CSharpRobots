@@ -61,7 +61,7 @@ namespace CSharpRobotsWPF
                     case "2":
                         if (selectedRobots.Count >= 4)
                             _wpfArena.StartDouble4(selectedRobots[0], selectedRobots[1], selectedRobots[2], selectedRobots[3]);
-                        else if (selectedRobots.Count >= 3)
+                        else if (selectedRobots.Count >= 2)
                             _wpfArena.StartDouble(selectedRobots[0], selectedRobots[1]);
                         break;
                         // Team
