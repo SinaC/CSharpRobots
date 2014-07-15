@@ -193,6 +193,7 @@ namespace Robots
             return false;
         }
 
+        // Compute enemy current speed, then use linear interpolation to compute next enemy position
         private bool FireOnEnemyInterpolated(double elapsedTime)
         {
             bool success = false;
@@ -201,8 +202,8 @@ namespace Robots
             double currentSpeedX, currentSpeedY;
             DifferenceRelativeToTime(elapsedTime, _previousEnemyX, _previousEnemyY, _currentEnemyX, _currentEnemyY, out currentSpeedX, out currentSpeedY);
 
-            double currentAccelerationX, currentAccelerationY;
-            DifferenceRelativeToTime(elapsedTime, _previousEnemySpeedX, _previousEnemySpeedY, currentSpeedX, currentSpeedY, out currentAccelerationX, out currentAccelerationY);
+            //double currentAccelerationX, currentAccelerationY;
+            //DifferenceRelativeToTime(elapsedTime, _previousEnemySpeedX, _previousEnemySpeedY, currentSpeedX, currentSpeedY, out currentAccelerationX, out currentAccelerationY);
 
             //SDK.Log("{0:0.00} - TICK:{1:0.00} | Enemy position: {2:0.0000}, {3:0.0000} Speed : {4:0.0000}, {5:0.0000} | range {6} angle {7}", DateTime.Now, SDK.Time, currentEnemyX, currentEnemyY, currentSpeedX, currentSpeedY, currentRange, currentAngle);
             //SDK.Log("{0:0.00} - estimated speed {1:0.0000} {2:0.0000} acceleration {3:0.0000} {4:0.0000}", SDK.Time, currentSpeedX, currentSpeedY, currentAccelerationX, currentAccelerationY);
