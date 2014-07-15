@@ -19,7 +19,524 @@ namespace Robots
         public const double Epsilon = 0.00001;
 
         public const int BorderSize = 30;
-        public const double FriendRangeSquared = 80*80;
+        public const double FriendRangeSquared = 40*40;
+
+        // Shared infos between team members
+        private static readonly int[] TeamLocX = new int[8];
+        private static readonly int[] TeamLocY = new int[8];
+        private static readonly int[] TeamDamage = new int[8];
+        private static readonly double[] TeamEnemyX = new double[8];
+        private static readonly double[] TeamEnemyY = new double[8];
+
+        private int _teamCount; // number of members in team
+        private int _id; // own id
+
+        // Updated with FindNearestEnemy and TrackEnemy
+        private double _currentEnemyX;
+        private double _currentEnemyY;
+        private double _currentEnemyAngle;
+        private double _currentEnemyRange;
+
+        // Updated by FireOnEnemy and FireOnEnemyInterpolated
+        private double _previousSuccessfulShootTime;
+        private double _previousTime;
+        private double _previousEnemyAngle;
+        private double _previousEnemyRange;
+        private double _previousEnemyX;
+        private double _previousEnemyY;
+        private double _previousEnemySpeedX; // TODO: could be use to determine acceleration and get next speed estimation
+        private double _previousEnemySpeedY;
+        private int _previousDamage;
+
+        // Updated by MoveSmartly
+        private bool _noMinDistanceLimit; // TODO: reset when switching target
+        private double _lastDrunkTurnTime;
+        private double _goToAngle;
+        private double _lastHitTime;
+        private double _estimatedEnemyShotTime;
+
+        // Constants
+        private int _arenaSize;
+        private int _maxDamage;
+        private int _missileSpeed;
+        private int _maxExplosionRange;
+        private int _maxExplosionRangePlusCannonRange;
+        private int _maxCannonRange;
+        private int _maxSpeed;
+
+        public override void Init()
+        {
+            SDK.Log("{0:HH:mm:ss.fff} - Init - v4", DateTime.Now);
+
+            _previousTime = SDK.Time;
+            _arenaSize = SDK.Parameters["ArenaSize"];
+            _maxDamage = SDK.Parameters["MaxDamage"];
+            _missileSpeed = SDK.Parameters["MissileSpeed"];
+            _maxExplosionRange = SDK.Parameters["MaxExplosionRange"];
+            _maxExplosionRangePlusCannonRange = SDK.Parameters["MaxExplosionRange"] + SDK.Parameters["MaxCannonRange"];
+            _maxCannonRange = SDK.Parameters["MaxCannonRange"];
+            _maxSpeed = SDK.Parameters["MaxSpeed"];
+
+            _teamCount = SDK.FriendsCount;
+            _id = SDK.Id;
+            _previousDamage = SDK.Damage;
+            _noMinDistanceLimit = false;
+
+            UpdateSharedLocation(SDK.LocX, SDK.LocY, SDK.Damage);
+
+            if (Move)
+                MoveSmartly();
+            bool found = FindNearestEnemy();
+            if (found)
+            {
+                bool success = FireOnEnemy();
+                if (success)
+                    _previousSuccessfulShootTime = SDK.Time;
+            }
+        }
+
+        public override void Step()
+        {
+            // Update shared info
+            UpdateSharedLocation(SDK.LocX, SDK.LocY, SDK.Damage);
+
+            double currentTime = SDK.Time;
+
+            double elapsedTime = currentTime - _previousTime;
+            double elapsedShootingTime = currentTime - _previousSuccessfulShootTime;
+
+            if (elapsedTime > 0.25 || elapsedShootingTime >= 1) // track/find enemy
+            {
+                // TODO: use enemy speed/acceleration to compute max range difference
+                double maxRangeDifference = 10.0;//_maxSpeed * elapsedTime + 0.5; // add 0.5 to be sure
+                bool found = TrackEnemy(maxRangeDifference);
+                if (!found)
+                {
+                    //SDK.Log("Enemy LOST, searching a new one");
+                    FindNearestEnemy();
+                }
+                _previousTime = currentTime;
+            }
+
+            if (elapsedShootingTime >= 1) // 1 second since last successfull shoot
+            {
+                // Fire on target
+                bool success = FireOnEnemyInterpolated(elapsedShootingTime);
+
+                //
+                if (success)
+                    _previousSuccessfulShootTime = SDK.Time;
+            }
+
+            // Estimate enemy shot time using previous distance between enemy and I, supposing my target is the shooter
+            int currentDamage = SDK.Damage;
+            if (currentDamage != _previousDamage)
+            {
+                _lastHitTime = currentTime;
+                _estimatedEnemyShotTime = _lastHitTime - Distance(SDK.LocX, SDK.LocY, _previousEnemyX, _previousEnemyY) / _missileSpeed;
+                _previousDamage = currentDamage;
+                SDK.Log("Damage detected: hit time {0} estimated shoot time {1}", _lastHitTime, _estimatedEnemyShotTime);
+            }
+
+            if (Move)
+                MoveSmartly();
+        }
+
+        private bool FireOnEnemy()
+        {
+            if (_currentEnemyAngle < _maxExplosionRangePlusCannonRange) // Don't fire if too far
+            {
+                SDK.Cannon((int) _currentEnemyAngle, (int) _currentEnemyRange);
+
+                _previousEnemyAngle = _currentEnemyAngle;
+                _previousEnemyRange = _currentEnemyRange;
+                _previousEnemyX = _currentEnemyX;
+                _previousEnemyY = _currentEnemyY;
+
+                return true;
+            }
+            return false;
+        }
+
+        private bool FireOnEnemyInterpolated(double elapsedTime)
+        {
+            bool success = false;
+            SDK.Log("{0:0.00} - Nearest enemy of {1}: A:{2:0.0000} R:{3:0.0000} {4:0.0000},{5:0.0000}", SDK.Time, _id, _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
+
+            double currentSpeedX, currentSpeedY;
+            DifferenceRelativeToTime(elapsedTime, _previousEnemyX, _previousEnemyY, _currentEnemyX, _currentEnemyY, out currentSpeedX, out currentSpeedY);
+
+            double currentAccelerationX, currentAccelerationY;
+            DifferenceRelativeToTime(elapsedTime, _previousEnemySpeedX, _previousEnemySpeedY, currentSpeedX, currentSpeedY, out currentAccelerationX, out currentAccelerationY);
+
+            //SDK.Log("{0:0.00} - TICK:{1:0.00} | Enemy position: {2:0.0000}, {3:0.0000} Speed : {4:0.0000}, {5:0.0000} | range {6} angle {7}", DateTime.Now, SDK.Time, currentEnemyX, currentEnemyY, currentSpeedX, currentSpeedY, currentRange, currentAngle);
+            SDK.Log("{0:0.00} - estimated speed {1:0.0000} {2:0.0000} acceleration {3:0.0000} {4:0.0000}", SDK.Time, currentSpeedX, currentSpeedY, currentAccelerationX, currentAccelerationY);
+
+            int cannonAngle, cannonRange;
+            ComputeCannonInfo(SDK.LocX, SDK.LocY, _currentEnemyX, _currentEnemyY, currentSpeedX, currentSpeedY, out cannonAngle, out cannonRange);
+
+            if (cannonRange > _maxExplosionRange && cannonRange < _maxExplosionRangePlusCannonRange) // Don't fire if too far
+                success = SDK.Cannon(cannonAngle, cannonRange) != 0;
+
+            _previousEnemyAngle = _currentEnemyAngle;
+            _previousEnemyRange = _currentEnemyRange;
+            _previousEnemyX = _currentEnemyX;
+            _previousEnemyY = _currentEnemyY;
+            _previousEnemySpeedX = currentSpeedX;
+            _previousEnemySpeedY = currentSpeedY;
+
+            //
+            return success;
+        }
+
+        // Scan all around
+        //  if target found,
+        //      if target is within correct range (minDistance and previous best range),
+        //          if target also found with rescan with same angle minus 1 with a double resolution,
+        //              angle -= 0.125
+        //              range = weighted average of both range (weight 1/8 for rescan and 7/8 for initial scan)
+        //          else if target also found with rescan with same angle plus 1 with a double resolution,
+        //              angle += 0.125
+        //              range = weighted average of both range (weight 1/8 for rescan and 7/8 for initial scan)
+        //          compute target position
+        //          if no friend on that position, 
+        //              new enemy
+        private bool FindNearestEnemy()
+        {
+            SDK.Log("**************Searching a new enemy");
+
+            bool found = false;
+            _currentEnemyAngle = 0;
+            _currentEnemyRange = _arenaSize;
+            _currentEnemyX = 0;
+            _currentEnemyY = 0;
+            for (int a = 0; a < 360; a++)
+            {
+                int r = SDK.Scan(a, 1);
+
+                double preciseRange = r;
+                double preciseAngle = a;
+                if (UpgradedPrecision)
+                    UpdgradePrecision(a, r, out preciseAngle, out preciseRange);
+
+                // Target must be in range
+                if ((_noMinDistanceLimit || r > _maxExplosionRange) && r < _currentEnemyRange)
+                {
+                    //double rawEnemyX, rawEnemyY;
+                    //ComputePoint(SDK.LocX, SDK.LocY, r, a, out rawEnemyX, out rawEnemyY);
+
+                    double enemyX, enemyY;
+                    ComputePoint(SDK.LocX, SDK.LocY, preciseRange, preciseAngle, out enemyX, out enemyY);
+                    if (!IsFriendlyTarget(enemyX, enemyY))
+                    {
+                        //double cheatAngle, cheatRange, cheatX, cheatY;
+                        //Cheat.CHEAT_FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
+
+                        _currentEnemyAngle = preciseAngle;
+                        _currentEnemyRange = preciseRange;
+                        _currentEnemyX = enemyX;
+                        _currentEnemyY = enemyY;
+
+                        UpdateSharedEnemy(_currentEnemyX, _currentEnemyY);
+
+                        //SDK.Log(" CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
+                        //SDK.Log("NORMAL A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}  RAW A:{4:0.0000} R:{5:0.0000} X:{6:0.0000} Y:{7:0.0000}", angle, range, enemyX, enemyY, a, r, rawEnemyX, rawEnemyY);
+                        SDK.Log("FIND ENEMY A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
+
+                        found = true;
+                    }
+                }
+            }
+            return found;
+        }
+
+        // Search previous target without rescanning everything
+        private bool TrackEnemy(double maxRangeDifference)
+        {
+            SDK.Log("TRACKING ENEMY");
+            // In following method, _currentEnemyAngle and _currentEnemyRange represents angle/range in previous TrackEnemy
+            bool found = false;
+            int a = (int)SDK.Round(_currentEnemyAngle);
+            int r;
+            int sign = 1; // sign of angle increment
+            int increment = 0; // angle increment
+
+            // sample: starting with angle = 20
+            // 20, 20+1*1=21, 21-1*2=19, 19+1*3=22, ...
+            while (true)
+            {
+                r = SDK.Scan(a, 1);
+                SDK.Log("Tracking enemy: a:{0} r:{1} inc:{2} sign:{3}  diff:{4:0.0000}  max diff: {5:0.0000}", a, r, increment, sign, SDK.Abs(r - _currentEnemyRange), maxRangeDifference);
+                if (r > 0 || increment >= 10)
+                    break;
+                increment++;
+                a += sign*increment;
+                sign = -sign;
+            }
+            if (r > 0 && SDK.Abs(r - _currentEnemyRange) <= maxRangeDifference)
+            {
+                double preciseRange = r;
+                double preciseAngle = a;
+                if (UpgradedPrecision)
+                    UpdgradePrecision(a, r, out preciseAngle, out preciseRange);
+                //
+                double enemyX, enemyY;
+                ComputePoint(SDK.LocX, SDK.LocY, preciseRange, preciseAngle, out enemyX, out enemyY);
+
+                //
+                _currentEnemyAngle = preciseAngle;
+                _currentEnemyRange = preciseRange;
+                _currentEnemyX = enemyX;
+                _currentEnemyY = enemyY;
+
+                UpdateSharedEnemy(_currentEnemyX, _currentEnemyY);
+
+                SDK.Log("TRACK ENEMY A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
+
+                found = true;
+            }
+            return found;
+        }
+
+        // Try to get more precision by scanning 1 degree before and 1 degree after with double resolution and weight 1/8
+        private void UpdgradePrecision(int a, int r, out double preciseAngle, out double preciseRange)
+        {
+            preciseAngle = a;
+            preciseRange = r;
+            if (r > 0)
+            {
+                int rBefore = SDK.Scan(a - 1, 2);
+                int rAfter = SDK.Scan(a + 1, 2);
+                if (rBefore > 0)
+                {
+                    preciseRange = (7.0 * r + rBefore) / 8.0;
+                    preciseAngle = a - 0.125;
+                }
+                else if (rAfter > 0)
+                {
+                    preciseRange = (7.0 * r + rAfter) / 8.0;
+                    preciseAngle = a + 0.125;
+                }
+            }
+        }
+
+        // Go to center if speed is 0
+        // If single match and target has taken more damage than I, drive full speed on target and fire without range restriction (aka suicide)
+        // Else if distance to target is almost max cannon range, lurk around target and fire
+        // Else, move pseudo randomly (if near wall, go to center; if too fast, slow down; if being hit recently, anticipate next hit and move to avoid shoot
+        private void MoveSmartly()
+        {
+            // Go to center if Speed is 0 at full speed
+            if (SDK.Speed == 0)
+                GoToCenter();
+            //else if (SDK.FriendsCount == 1) and targetDamage > own damage + 40  ==> drive to target full speed and fire without range restriction (aka suicide)
+            else
+            {
+                // TODO
+                //double distanceToTarget2 = DistanceSquared(SDK.LocX, SDK.LocY, _currentEnemyX, _currentEnemyY);
+                //double distanceToWall = SmallestDistanceToWall(SDK.LocX, SDK.LocY);
+                //if (distanceToTarget2 > _maxCannonRange*_maxCannonRange && distanceToWall > 30)
+                //    Lurk();
+                //else
+                //    DrunkWalk();
+                DrunkWalk();
+            }
+        }
+
+        private void GoToCenter()
+        {
+            double diffX = _arenaSize/2.0 - SDK.LocX;
+            double diffY = _arenaSize/2.0 - SDK.LocY;
+            _goToAngle = SDK.Rad2Deg(SDK.ATan2(diffY, diffX));
+            SDK.Drive((int)_goToAngle, 100);
+            SDK.Log("Go to center {0:0.00} {1}", _goToAngle, SDK.Speed);
+        }
+
+        private void Suicide()
+        {
+            _goToAngle = _currentEnemyAngle;
+            SDK.Drive((int)_goToAngle, 100);
+            _noMinDistanceLimit = true;
+            SDK.Log("Leeeerooooyyyyyyyyy {0:0.00} {1}", _goToAngle, SDK.Speed);
+        }
+
+        private void Lurk()
+        {
+            SDK.Log("Lurking around target");
+        }
+
+        private void DrunkWalk()
+        {
+            double distanceToTarget = Distance(SDK.LocX, SDK.LocY, _currentEnemyX, _currentEnemyY);
+            double timeMultiplier = 1.0; // move less often when far from target
+            if (distanceToTarget > 300.0)
+                timeMultiplier = 2.0;
+            else if (distanceToTarget > 600.0)
+                timeMultiplier = 3.0;
+            double distanceToWall = SmallestDistanceToWall(SDK.LocX, SDK.LocY);
+            if (SDK.Speed > 50) // Slow down without changing direction
+            {
+                if (SDK.Time - _lastDrunkTurnTime < 0.45 * timeMultiplier && distanceToWall > 30.0)
+                    return;
+                SDK.Drive((int)_goToAngle, 50);
+                SDK.Log("DRUNK: Slow down {0:0.00} {1}", _goToAngle, SDK.Speed);
+                return;
+            }
+            if (distanceToWall < 30.0) // escape from wall
+            {
+                double diffX = _arenaSize / 2.0 - SDK.LocX;
+                double diffY = _arenaSize / 2.0 - SDK.LocY;
+                _goToAngle = SDK.Rad2Deg(SDK.ATan2(diffY, diffX));
+                SDK.Drive((int)_goToAngle, 100);
+                _lastDrunkTurnTime = SDK.Time;
+                SDK.Log("DRUNK: Too close from wall, go to center {0:0.00} {1}", _goToAngle, SDK.Speed);
+                return;
+            }
+            // check if being hit or didn't turn too recently
+            double t0 = _estimatedEnemyShotTime - (int)_estimatedEnemyShotTime; // [0, 1[
+            double t1 = SDK.Time - (int)SDK.Time; // [0, 1[
+            double diffT = SDK.Abs(t0 - t1); // estimate when I have to turn to avoid next shoot
+            if ((diffT < 0.05 || diffT > 0.95) && SDK.Time - _lastDrunkTurnTime > 0.5)
+            {
+                int i = SDK.Rand(2);
+                if (i == 0)
+                {
+                    _goToAngle += 90.0;
+                    SDK.Log("DRUNK: Turning +1/4 {0:0.00} {1}", _goToAngle, SDK.Speed);
+                }
+                else
+                {
+                    _goToAngle -= 90.0;
+                    SDK.Log("DRUNK: Turning -1/4 {0:0.00} {1}", _goToAngle, SDK.Speed);
+                }
+                SDK.Drive((int)_goToAngle, 100);
+                _lastDrunkTurnTime = SDK.Time;
+            }
+        }
+
+        // HELPERS
+
+        private double SmallestDistanceToWall(double x, double y)
+        {
+            double smallestDistance = Double.MaxValue;
+            // distance from left wall is x coordinate
+            if (x < smallestDistance)
+                smallestDistance = x;
+            // distance from top wall is y coordinate
+            if (y < smallestDistance)
+                smallestDistance = y;
+            // distance from right wall is maxsize - x coordinate
+            if (_arenaSize - x < smallestDistance)
+                smallestDistance = _arenaSize - x;
+            // distance from bottom wall is maxsize - y coordinate
+            if (_arenaSize - y < smallestDistance)
+                smallestDistance = _arenaSize - y;
+            return smallestDistance;
+        }
+
+        private void UpdateSharedLocation(int locX, int locY, int damage)
+        {
+            //SDK.Log("UPDATING INFO {0} {1} {2} {3}", _id, locX, locY, damage);
+            TeamLocX[_id] = locX;
+            TeamLocY[_id] = locY;
+            TeamDamage[_id] = damage;
+        }
+
+        private void UpdateSharedEnemy(double locX, double locY)
+        {
+            TeamEnemyX[_id] = locX;
+            TeamEnemyY[_id] = locY;
+        }
+
+        private bool IsFriendlyTarget(double locX, double locY)
+        {
+            if (_teamCount > 1)
+            {
+                //SDK.Log("CHECKING IF FRIENDLY TARGET {0} - {1}, {2}", _id, locX, locY);
+                for (int i = 0; i < _teamCount; i++)
+                    if (i != _id && TeamDamage[i] < _maxDamage) // don't consider myself or dead teammate
+                    {
+                        //SDK.Log("TEAM MEMBER {0} : {1}, {2}", i, TeamLocX[i], TeamLocY[i]);
+                        double distance2 = DistanceSquared(locX, locY, TeamLocX[i], TeamLocY[i]);
+                        if (distance2 < FriendRangeSquared)
+                            return true;
+                    }
+            }
+            return false;
+        }
+
+        private int CountAliveFriends()
+        {
+            int count = 0;
+            for (int i = 0; i < _teamCount; i++)
+                if (i != _id && TeamDamage[i] < _maxDamage)
+                    count++;
+            return count;
+        }
+
+        private double Distance(double x1, double y1, double x2, double y2)
+        {
+            return SDK.Sqrt(DistanceSquared(x1, y1, x2, y2));
+        }
+
+        private double DistanceSquared(double x1, double y1, double x2, double y2)
+        {
+            double dx = x1 - x2;
+            double dy = y1 - y2;
+            return dx*dx + dy*dy;
+        }
+
+        private void DifferenceRelativeToTime(double elapsed, double previousX, double previousY, double currentX, double currentY, out double relativeX, out double relativeY)
+        {
+            relativeX = (currentX - previousX) / elapsed;
+            relativeY = (currentY - previousY) / elapsed;
+        }
+
+        private void ComputePoint(double centerX, double centerY, double distance, double degrees, out double x, out double y)
+        {
+            double radians = SDK.Deg2Rad(degrees);
+            x = centerX + distance*SDK.Cos(radians);
+            y = centerY + distance*SDK.Sin(radians);
+        }
+
+        private void ComputeCannonInfo(double robotX, double robotY, double enemyX, double enemyY, double speedX, double speedY, out int angle, out int range)
+        {
+            //http://jrobots.sourceforge.net/jjr_tutorials.shtml
+            // Say P (using vector notation) the unknown point in which the missile meets the enemy, R the starting location of your robot, T the starting location of the target and V its velocity. 
+            // The target will reach the point P in t seconds, according to the formula
+            // P = T + V t
+            // (P - R)^2 = (300 t)^2
+            // Solving these 2 equations:
+            // t = ( sqrt(300^2 D^2 - (DxV)^2) + D(dot)V ) / (300^2 - V^2)  with D = T-R
+            // t = ( sqrt(300^2 (Dx^2 + Dy^2) - (DxVy - DyVx)^2) + (DxVx + DyVy) ) / (300^2 - (Vx^2 + Vy^2) )
+            double dX = enemyX - robotX;
+            double dY = enemyY - robotY;
+            double t = SDK.Sqrt(_missileSpeed * _missileSpeed * (dX * dX + dY * dY) - (dX * speedY - dY * speedX) * (dX * speedY - dY * speedX) + 0.5) / (_missileSpeed * _missileSpeed - (speedX * speedX + speedY * speedY));
+            double pX = enemyX + speedX*t;
+            double pY = enemyY + speedY*t;
+
+            double diffX = pX - robotX;
+            double diffY = pY - robotY;
+
+            Vector v = new Vector(diffX, diffY);
+            angle = (int) SDK.Rad2Deg(v.A);
+            range = (int) v.R;
+
+            SDK.Log("{0:0.00} - estimated position at {1:0.00} {2:0.0000} {3:0.0000}", SDK.Time, SDK.Time + t, pX, pY);
+
+            //SDK.Log("t: {0:0.0000} (global: {1:0.0000} new enemy position: {2:0.0000}, {3:0.0000}  angle {4:0} range {5:0}", t, SDK.Time + t, pX, pY, angle, range);
+        }
+    }
+
+    /* v3 2014-07-15
+    public class SinaC : Robot
+    {
+        public const bool Move = true;
+        public const bool UpgradedPrecision = true;
+        public const double Epsilon = 0.00001;
+
+        public const int BorderSize = 30;
+        public const double FriendRangeSquared = 40*40;
 
         // Shared infos between team members
         private static readonly int[] TeamLocX = new int[8];
@@ -63,7 +580,7 @@ namespace Robots
 
         public override void Init()
         {
-            SDK.Log("{0:HH:mm:ss.fff} - SINAC - Init", DateTime.Now);
+            SDK.Log("{0:HH:mm:ss.fff} - Init", DateTime.Now);
 
             _previousTime = SDK.Time;
             _arenaSize = SDK.Parameters["ArenaSize"];
@@ -135,7 +652,7 @@ namespace Robots
 
             //if (elapsedTime > 2 ) // 2 seconds since last move
             //{
-            //    //SDK.Log("{0:HH:mm:ss.fff} - SINAC - MOVE RANDOMLY FROM LOCATION {1} : {2},{3}", DateTime.Now, _id, SDK.LocX, SDK.LocY);
+            //    //SDK.Log("{0:HH:mm:ss.fff} - MOVE RANDOMLY FROM LOCATION {1} : {2},{3}", DateTime.Now, _id, SDK.LocX, SDK.LocY);
 
             //    // Change direction
             //    if (Move)
@@ -165,7 +682,7 @@ namespace Robots
         private bool FireOnEnemyInterpolated(double elapsedTime)
         {
             bool success = false;
-            SDK.Log("{0:0.00} - SINAC - Nearest enemy of {1}: A:{2:0.0000} R:{3:0.0000} {4:0.0000},{5:0.0000}", SDK.Time, _id, _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
+            SDK.Log("{0:0.00} - Nearest enemy of {1}: A:{2:0.0000} R:{3:0.0000} {4:0.0000},{5:0.0000}", SDK.Time, _id, _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
 
             double currentSpeedX, currentSpeedY;
             DifferenceRelativeToTime(elapsedTime, _previousEnemyX, _previousEnemyY, _currentEnemyX, _currentEnemyY, out currentSpeedX, out currentSpeedY);
@@ -173,8 +690,8 @@ namespace Robots
             double currentAccelerationX, currentAccelerationY;
             DifferenceRelativeToTime(elapsedTime, _previousEnemySpeedX, _previousEnemySpeedY, currentSpeedX, currentSpeedY, out currentAccelerationX, out currentAccelerationY);
 
-            //SDK.Log("{0:0.00} - SINAC - TICK:{1:0.00} | Enemy position: {2:0.0000}, {3:0.0000} Speed : {4:0.0000}, {5:0.0000} | range {6} angle {7}", DateTime.Now, SDK.Time, currentEnemyX, currentEnemyY, currentSpeedX, currentSpeedY, currentRange, currentAngle);
-            SDK.Log("{0:0.00} - SINAC - estimated speed {1:0.0000} {2:0.0000} acceleration {3:0.0000} {4:0.0000}", SDK.Time, currentSpeedX, currentSpeedY, currentAccelerationX, currentAccelerationY);
+            //SDK.Log("{0:0.00} - TICK:{1:0.00} | Enemy position: {2:0.0000}, {3:0.0000} Speed : {4:0.0000}, {5:0.0000} | range {6} angle {7}", DateTime.Now, SDK.Time, currentEnemyX, currentEnemyY, currentSpeedX, currentSpeedY, currentRange, currentAngle);
+            SDK.Log("{0:0.00} - estimated speed {1:0.0000} {2:0.0000} acceleration {3:0.0000} {4:0.0000}", SDK.Time, currentSpeedX, currentSpeedY, currentAccelerationX, currentAccelerationY);
 
             int cannonAngle, cannonRange;
             ComputeCannonInfo(SDK.LocX, SDK.LocY, _currentEnemyX, _currentEnemyY, currentSpeedX, currentSpeedY, out cannonAngle, out cannonRange);
@@ -303,7 +820,8 @@ namespace Robots
             {
                 // TODO
                 //double distanceToTarget2 = DistanceSquared(SDK.LocX, SDK.LocY, _currentEnemyX, _currentEnemyY);
-                //if (distanceToTarget2 > _maxCannonRange*_maxCannonRange && SmallestDistanceToWall(SDK.LocX, SDK.LocY) > 30)
+                //double distanceToWall = SmallestDistanceToWall(SDK.LocX, SDK.LocY);
+                //if (distanceToTarget2 > _maxCannonRange*_maxCannonRange && distanceToWall > 30)
                 //    Lurk();
                 //else
                 //    DrunkWalk();
@@ -350,7 +868,7 @@ namespace Robots
                 SDK.Log("DRUNK: Slow down {0:0.00} {1}", _goToAngle, SDK.Speed);
                 return;
             }
-            if (distanceToWall < 30.0D) // escape from wall
+            if (distanceToWall < 30.0) // escape from wall
             {
                 double diffX = _arenaSize / 2.0 - SDK.LocX;
                 double diffY = _arenaSize / 2.0 - SDK.LocY;
@@ -364,7 +882,7 @@ namespace Robots
             double t0 = _estimatedEnemyShotTime - (int)_estimatedEnemyShotTime; // [0, 1[
             double t1 = SDK.Time - (int)SDK.Time; // [0, 1[
             double diffT = SDK.Abs(t0 - t1); // estimate when I have to turn to avoid next shoot
-            if ((diffT < 0.05D || diffT > 0.95) && SDK.Time - _lastDrunkTurnTime > 0.5)
+            if ((diffT < 0.05 || diffT > 0.95) && SDK.Time - _lastDrunkTurnTime > 0.5)
             {
                 int i = SDK.Rand(2);
                 if (i == 0)
@@ -475,11 +993,12 @@ namespace Robots
             angle = (int) SDK.Rad2Deg(v.A);
             range = (int) v.R;
 
-            SDK.Log("{0:0.00} - SINAC - estimated position at {1:0.00} {2:0.0000} {3:0.0000}", SDK.Time, SDK.Time + t, pX, pY);
+            SDK.Log("{0:0.00} - estimated position at {1:0.00} {2:0.0000} {3:0.0000}", SDK.Time, SDK.Time + t, pX, pY);
 
             //SDK.Log("t: {0:0.0000} (global: {1:0.0000} new enemy position: {2:0.0000}, {3:0.0000}  angle {4:0} range {5:0}", t, SDK.Time + t, pX, pY, angle, range);
         }
     }
+    */
 
     /* v2 2014-07-10
     // Fire on target, using linear interpolation to predict target position

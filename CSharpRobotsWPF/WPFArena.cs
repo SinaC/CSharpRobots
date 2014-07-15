@@ -48,8 +48,9 @@ namespace CSharpRobotsWPF
         public void StartStop()
         {
             // Test mode without selection needed
-            StartStopInternal(arena => arena.InitializeSingleMatch(typeof (Robots.SinaC), typeof (Robots.Stinger), 500, 500, 50, 150));
+            StartStopInternal(arena => arena.InitializeDoubleMatch(typeof(Robots.SinaC), typeof(Robots.Stinger)));
             //StartStopInternal(arena => arena.InitializeDoubleMatch(typeof(Robots.SinaC), typeof(Robots.Rabbit)));
+            //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Rabbit), 500, 500, 50, 150));
         }
 
         public void StartSolo(Type type)
@@ -62,9 +63,19 @@ namespace CSharpRobotsWPF
             StartStopInternal(arena => arena.InitializeSingleMatch(robot1, robot2));
         }
 
+        public void StartSingle4(Type robot1, Type robot2, Type robot3, Type robot4)
+        {
+            StartStopInternal(arena => arena.InitializeSingle4Match(robot1, robot2, robot3, robot4));
+        }
+
         public void StartDouble(Type robot1, Type robot2)
         {
             StartStopInternal(arena => arena.InitializeDoubleMatch(robot1, robot2));
+        }
+
+        public void StartDouble4(Type robot1, Type robot2, Type robot3, Type robot4)
+        {
+            StartStopInternal(arena => arena.InitializeDouble4Match(robot1, robot2, robot3, robot4));
         }
 
         public void StartTeam(Type robot1, Type robot2, Type robot3, Type robot4)

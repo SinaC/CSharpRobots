@@ -204,10 +204,22 @@ namespace Arena.Internal
             InitializeMatch(1, idx => new { X = idx == 0 ? locX1 : locX2, Y = idx == 0 ? locY1 : locY2}, team1, team2);
         }
 
+        public void InitializeSingle4Match(Type team1, Type team2, Type team3, Type team4)
+        {
+            Mode = ArenaModes.Single4;
+            InitializeMatch(1, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2, team3, team4);
+        }
+
         public void InitializeDoubleMatch(Type team1, Type team2)
         {
             Mode = ArenaModes.Double;
             InitializeMatch(2, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2);
+        }
+
+        public void InitializeDouble4Match(Type team1, Type team2, Type team3, Type team4)
+        {
+            Mode = ArenaModes.Double4;
+            InitializeMatch(2, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2, team3, team4);
         }
 
         public void InitializeTeamMatch(Type team1, Type team2, Type team3, Type team4)

@@ -50,14 +50,18 @@ namespace CSharpRobotsWPF
                 List<Type> selectedRobots = RobotOptionEntries.Where(x => x.IsSelected).Select(x => x.Type).ToList();
                 switch(radioTag)
                 {
-                        // Single
+                        // Single and Single4
                     case "1":
-                        if (selectedRobots.Count >= 2)
+                        if (selectedRobots.Count >= 4)
+                            _wpfArena.StartSingle4(selectedRobots[0], selectedRobots[1], selectedRobots[2], selectedRobots[3]);
+                        else if (selectedRobots.Count >= 2)
                             _wpfArena.StartSingle(selectedRobots[0], selectedRobots[1]);
                         break;
-                        // Double
+                        // Double and Double4
                     case "2":
-                        if (selectedRobots.Count >= 2)
+                        if (selectedRobots.Count >= 4)
+                            _wpfArena.StartDouble4(selectedRobots[0], selectedRobots[1], selectedRobots[2], selectedRobots[3]);
+                        else if (selectedRobots.Count >= 3)
                             _wpfArena.StartDouble(selectedRobots[0], selectedRobots[1]);
                         break;
                         // Team
