@@ -55,7 +55,8 @@ namespace Arena.Internal
         {
             _userRobot = userRobot;
             _userRobot.SDK = this;
-            _userRobot.Cheat = this; // uncomment this to activate cheats
+            if (ParametersSingleton.EnableCheat)
+                _userRobot.Cheat = this; // uncomment this to activate cheats
             _arena = arena;
             TeamName = teamName;
             Id = id;

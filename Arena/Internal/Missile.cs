@@ -82,14 +82,14 @@ namespace Arena.Internal
 
         public void TargetReached()
         {
-            // Check speed
-            double elapsed = Tick.ElapsedMilliseconds(_launchTick);
-            double diffX = LocX - LaunchLocX;
-            double diffY = LocY - LaunchLocY;
-            double distance = System.Math.Sqrt(diffX*diffX + diffY*diffY);
-            double speed = distance/elapsed*1000.0; // in m/s
-            double tick = Tick.ElapsedSeconds(_matchStart);
-            Log.WriteLine(Log.LogLevels.Debug, "Missile {0} : {1:0.00}  | target reached. Speed {2:0.000} Distance {3:0.000} Range {4}  loc:{5:0.000},{6:0.000}", Id, tick, speed, distance, Range, LocX, LocY);
+            //// Check speed
+            //double elapsed = Tick.ElapsedMilliseconds(_launchTick);
+            //double diffX = LocX - LaunchLocX;
+            //double diffY = LocY - LaunchLocY;
+            //double distance = System.Math.Sqrt(diffX*diffX + diffY*diffY);
+            //double speed = distance/elapsed*1000.0; // in m/s
+            //double tick = Tick.ElapsedSeconds(_matchStart);
+            //Log.WriteLine(Log.LogLevels.Debug, "Missile {0} : {1:0.00}  | target reached. Speed {2:0.000} Distance {3:0.000} Range {4}  loc:{5:0.000},{6:0.000}", Id, tick, speed, distance, Range, LocX, LocY);
 
             State = MissileStates.Exploding;
         }

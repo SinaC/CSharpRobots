@@ -30,6 +30,7 @@ namespace Arena.Internal
         // Missile
         public const int MissileSpeed = 300; // in m/s
         // Robot
+        public const bool EnableCheat = false;
         public const double TrigonometricBias = 100000;
         public const int MaxSpeed = 30; // in m/s
         public const int MaxDamage = 100;

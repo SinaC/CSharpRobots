@@ -3,8 +3,6 @@ using SDK;
 
 namespace Robots
 {
-    // TODO: use own movement while interpolating target position
-
     // Behaviour:
     //  Track previous enemy, if not found, search a new enemy (don't consider teammate as enemy)
     //  Fire on tracked/found enemy using linear interpolation if enemy tracked, using direct fire if new enemy
@@ -15,7 +13,7 @@ namespace Robots
         // Robot parameters
         private const bool UpgradedPrecision = true;
         private const double FriendRange = 20;
-        private const double TrackTime = 0.25;
+        private const double TrackStepTime = 0.25;
 
         // Shared infos between team members
         private static readonly int[] TeamLocX = new int[8];
@@ -102,7 +100,8 @@ namespace Robots
             SaveCurrentState();
 
             //MoveToCenter();
-            SDK.Drive(0, 50);
+            //SDK.Drive(180, 50);
+            Move();
         }
 
         public override void Step()
@@ -119,7 +118,7 @@ namespace Robots
             double elapsedCannonTime = currentTime - _previousCannonTime;
 
             bool newEnemy = false;
-            if (elapsedTrackTime > TrackTime || elapsedCannonTime >= 1) // track/find enemy
+            if (elapsedTrackTime > TrackStepTime || elapsedCannonTime >= 1) // track/find enemy
             {
                 // TODO: use enemy speed/acceleration to compute max range difference
                 double maxRangeDifference = 10.0;//_maxSpeed * elapsedTime + 0.5; // add 0.5 to be sure
@@ -156,7 +155,7 @@ namespace Robots
                 SDK.LogLine("Damage detected: hit time {0} estimated shoot time {1}", _lastHitTime, _estimatedEnemyCannonTime);
             }
 
-            //Move();
+            Move();
         }
 
         #region Current state and shared informations
@@ -214,8 +213,8 @@ namespace Robots
                     ComputePoint(_currentLocX, _currentLocY, preciseRange, preciseAngle, out enemyX, out enemyY);
                     if (!IsFriendlyTarget(enemyX, enemyY))
                     {
-                        double cheatAngle, cheatRange, cheatX, cheatY;
-                        Cheat.CHEAT_FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
+                        //double cheatAngle, cheatRange, cheatX, cheatY;
+                        //Cheat.CHEAT_FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
 
                         // Save enemy position/angle/range
                         _currentEnemyAngle = preciseAngle;
@@ -226,7 +225,7 @@ namespace Robots
                         // Save enemy to shared
                         UpdateSharedEnemyLocation(_currentEnemyX, _currentEnemyY);
 
-                        SDK.LogLine("FIND CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
+                        //SDK.LogLine("FIND CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
                         SDK.LogLine("FIND ENEMY A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
 
                         bestRange = preciseRange;
@@ -271,8 +270,12 @@ namespace Robots
                 double enemyX, enemyY;
                 ComputePoint(_currentLocX, _currentLocY, preciseRange, preciseAngle, out enemyX, out enemyY);
 
-                double cheatAngle, cheatRange, cheatX, cheatY;
-                Cheat.CHEAT_FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
+                //
+                double rawEnemyX, rawEnemyY;
+                ComputePoint(_currentLocX, _currentLocY, r, a, out rawEnemyX, out rawEnemyY);
+
+                //double cheatAngle, cheatRange, cheatX, cheatY;
+                //Cheat.CHEAT_FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
 
                 // Save enemy position/angle/range
                 _currentEnemyAngle = preciseAngle;
@@ -283,8 +286,9 @@ namespace Robots
                 // Save enemy to shared
                 UpdateSharedEnemyLocation(_currentEnemyX, _currentEnemyY);
 
-                SDK.LogLine("TRACK CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
+                //SDK.LogLine("TRACK CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
                 SDK.LogLine("TRACK ENEMY A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
+                SDK.LogLine("  RAW ENEMY A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", a, r, rawEnemyX, rawEnemyY);
 
                 //SDK.LogLine("TRACK ENEMY A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
 
@@ -332,7 +336,7 @@ namespace Robots
             //double currentAccelerationX, currentAccelerationY;
             //DifferenceRelativeToTime(elapsedTime, _previousEnemySpeedX, _previousEnemySpeedY, currentSpeedX, currentSpeedY, out currentAccelerationX, out currentAccelerationY);
 
-            SDK.LogLine("{0:0.00} - TICK:{1:0.00} | Enemy position: {2:0.0000}, {3:0.0000} Speed : {4:0.0000}, {5:0.0000} | range {6} angle {7}", DateTime.Now, SDK.Time, _currentEnemyX, _currentEnemyY, _currentEnemySpeedX, _currentEnemySpeedY, _currentEnemyRange, _currentEnemyAngle);
+            SDK.LogLine("{0:0.00} | Enemy position: {1:0.0000}, {2:0.0000} Speed:{3:0.0000}, {4:0.0000} | range {5} angle {6} | Loc:{7},{8}", SDK.Time, _currentEnemyX, _currentEnemyY, _currentEnemySpeedX, _currentEnemySpeedY, _currentEnemyRange, _currentEnemyAngle, _currentLocX, _currentLocY);
             //SDK.LogLine("{0:0.00} - estimated speed {1:0.0000} {2:0.0000} acceleration {3:0.0000} {4:0.0000}", SDK.Time, _currentEnemySpeedX, _currentEnemySpeedY, currentAccelerationX, currentAccelerationY);
 
             //http://jrobots.sourceforge.net/jjr_tutorials.shtml
@@ -397,62 +401,16 @@ namespace Robots
 
         private void Move()
         {
-            //double distanceToEnemy = Distance(_currentLocX, _currentLocY, _currentEnemyX, _currentEnemyY);
+            double distanceToEnemy = Distance(_currentLocX, _currentLocY, _currentEnemyX, _currentEnemyY);
 
-            //if (distanceToEnemy > _maxExplosionRangePlusCannonRange)
-            //    MoveToEnemy();
-            //else
-            //    MoveRandomly();
+            if (distanceToEnemy > _maxExplosionRangePlusCannonRange)
+                MoveToEnemy();
+            else
+                MoveRandomly();
         }
 
         private void MoveRandomly()
         {
-            /*
-             * double distanceToTarget = Distance(_currentLocX, _currentLocY, _currentEnemyX, _currentEnemyY);
-               double timeMultiplier = 1.0; // move less often when far from target
-               if (distanceToTarget > 300.0)
-                   timeMultiplier = 2.0;
-               else if (distanceToTarget > 600.0)
-                   timeMultiplier = 3.0;
-               double distanceToWall = SmallestDistanceToWall(_currentLocX, _currentLocY);
-               if (SDK.Speed > 50) // Slow down without changing direction
-               {
-                   if (SDK.Time - _lastDrunkTurnTime < 0.45 * timeMultiplier && distanceToWall > 30.0)
-                       return;
-                   SDK.Drive((int)SDK.Round(_goToAngle), 50);
-                   SDK.LogLine("DRUNK: Slow down {0:0.00} {1}", _goToAngle, SDK.Speed);
-                   return;
-               }
-               if (distanceToWall < 30.0) // escape from wall
-               {
-                   double diffX = _arenaSize / 2.0 - _currentLocX;
-                   double diffY = _arenaSize / 2.0 - _currentLocY;
-                   _goToAngle = SDK.Rad2Deg(SDK.ATan2(diffY, diffX));
-                   SDK.Drive((int)SDK.Round(_goToAngle), 100);
-                   _lastDrunkTurnTime = SDK.Time;
-                   SDK.LogLine("DRUNK: Too close from wall, go to center full speed {0:0.00} {1}", _goToAngle, SDK.Speed);
-                   return;
-               }
-               // check if being hit or didn't turn too recently
-               double t0 = _estimatedEnemyShotTime - (int)_estimatedEnemyShotTime; // [0, 1[
-               double t1 = SDK.Time - (int)SDK.Time; // [0, 1[
-               double diffT = SDK.Abs(t0 - t1); // estimate when I have to turn to avoid next shoot
-               if ((diffT < 0.05 || diffT > 0.95) && SDK.Time - _lastDrunkTurnTime > 0.5)
-               {
-                   int i = SDK.Rand(2);
-                   if (i == 0)
-                   {
-                       _goToAngle += 90.0;
-                       SDK.LogLine("DRUNK: Turning +1/4 full speed {0:0.00} {1}", _goToAngle, SDK.Speed);
-                   }
-                   else
-                   {
-                       _goToAngle -= 90.0;
-                       SDK.LogLine("DRUNK: Turning -1/4 full speed {0:0.00} {1}", _goToAngle, SDK.Speed);
-                   }
-                   SDK.Drive((int)SDK.Round(_goToAngle), 100);
-                   _lastDrunkTurnTime = SDK.Time;
-               }*/
             double distanceToTarget = Distance(_currentLocX, _currentLocY, _currentEnemyX, _currentEnemyY);
             double timeMultiplier = 1.0; // move less often when far from target
             if (distanceToTarget > 300.0)
@@ -470,26 +428,36 @@ namespace Robots
             }
             else if (distanceToWall < 30.0) // Escape from wall, moving to center
             {
-                _driveAngle = Angle(_arenaSize / 2.0, _arenaSize / 2.0, _currentLocX, _currentLocY);
+                _driveAngle = Angle(_arenaSize/2.0, _arenaSize/2.0, _currentLocX, _currentLocY);
                 Drive(_driveAngle, 100);
                 _lastRandomTurn = SDK.Time;
                 SDK.LogLine("Driving to center away from wall at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
             }
-            else if (SDK.Time - _lastRandomTurn > 0.5) // Change direction randomly if not turned too recently
+                //SDK.LogLine("t0:{0:0.0000}  t1:{1:0.0000}  diff:{2:0.0000}", t0, t1, diffT);
+            else
             {
-                int i = SDK.Rand(2);
-                if (i == 0)
+                // Check if being hit or didn't turn too recently
+                double t0 = _estimatedEnemyCannonTime - (int) _estimatedEnemyCannonTime; // [0, 1[
+                double t1 = SDK.Time - (int) SDK.Time; // [0, 1[
+                double diffT = SDK.Abs(t0 - t1); // estimate when I have to turn to avoid next shoot
+
+                if ((diffT < 0.05 || diffT > 0.95) && SDK.Time - _lastRandomTurn > 0.5)
+                //else if (SDK.Time - _lastRandomTurn > 0.9) // Change direction randomly if not turned too recently
                 {
-                    _driveAngle += 90.0;
-                    SDK.LogLine("Turning +1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
+                    int i = SDK.Rand(2);
+                    if (i == 0)
+                    {
+                        _driveAngle += 90.0;
+                        SDK.LogLine("Turning +1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
+                    }
+                    else
+                    {
+                        _driveAngle -= 90.0;
+                        SDK.LogLine("Turning -1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
+                    }
+                    Drive(_driveAngle, 100);
+                    _lastRandomTurn = SDK.Time;
                 }
-                else
-                {
-                    _driveAngle -= 90.0;
-                    SDK.LogLine("Turning -1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
-                }
-                Drive(_driveAngle, 100);
-                _lastRandomTurn = SDK.Time;
             }
         }
 
@@ -560,7 +528,7 @@ namespace Robots
 
         private double Distance(double x1, double y1, double x2, double y2)
         {
-            return SDK.Sqrt(DistanceSquared(x1, y1, x2, y2)+0.5);
+            return SDK.Sqrt(DistanceSquared(x1, y1, x2, y2));
         }
 
         private double DistanceSquared(double x1, double y1, double x2, double y2)
