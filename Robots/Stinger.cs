@@ -201,7 +201,9 @@
             }
             else if (range > 0 && range <= 50)
             {
-                SDK.Cannon(scan, 45);
+                int fired = SDK.Cannon(scan, 45);
+                if (fired != 0)
+                    SDK.LogLine("Fire: {0}", SDK.Time);
             }
         }
 
@@ -242,7 +244,9 @@
                     if (rx < 0) angle += 3.1416;
                 }
                 int degrees = (int) (angle*180/3.1416);
-                SDK.Cannon(degrees, (int) (SDK.Sqrt(r2) + 0.5));
+                int fired = SDK.Cannon(degrees, (int) (SDK.Sqrt(r2) + 0.5));
+                if (fired != 0)
+                    SDK.LogLine("Fire: {0}", SDK.Time);
             }
         }
     }

@@ -74,7 +74,7 @@ namespace SDK
         /// </summary>
         /// <param name="format">is a composite format string that contains text intermixed with zero or more format items, which correspond to objects in the args array.</param>
         /// <param name="args">is an object array that contains zero or more objects to format.</param>
-        void Log(string format, params object[] args);
+        void LogLine(string format, params object[] args);
 
         #region Math
 

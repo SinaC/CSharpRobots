@@ -7,7 +7,7 @@ namespace Robots
     {
         public override void Init()
         {
-            System.Diagnostics.Debug.WriteLine("Target: my position {0} {1}", SDK.LocX, SDK.LocY);
+            SDK.LogLine("Target: my position {0} {1}", SDK.LocX, SDK.LocY);
         }
 
         public override void Step()

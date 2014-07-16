@@ -9,7 +9,7 @@ namespace Robots.Broken
     {
         public override void Init()
         {
-            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
+            SDK.LogLine("NOT YET CONVERTED");
         }
 
         public override void Step()

@@ -40,7 +40,7 @@
             int currentSpeed = SDK.Speed;
             int currentDamage = SDK.Damage;
 
-            //System.Diagnostics.Debug.WriteLine("Speed X:{0:0.0000} Y:{1:0.0000} - Time {2:0.0000}", speedX, speedY, diffTime);
+            //SDK.LogLine("Speed X:{0:0.0000} Y:{1:0.0000} - Time {2:0.0000}", speedX, speedY, diffTime);
 
             double diffLastTime = currentTime - _lastTime;
             if (diffLastTime > 1)// || _lastDamage < currentDamage)
@@ -61,7 +61,7 @@
                 int diffSpeed = currentSpeed - _previousSpeed;
                 double acceleration = diffSpeed/diffLastTime;
 
-                System.Diagnostics.Debug.WriteLine("TICK:{0:0.00} | Loc:{1},{2} | Instant speed X:{3:0.00} Y:{4:0.00} - Elapsed {5:0.00}  diff X:{6:0.00} Y:{7:0.00}  Dmg:{8} acceleration:{9:0.00}  {10:0.0000} {11:0.0000}", SDK.Time, currentX, currentY, actualSpeedX, actualSpeedY, diffTime, diffX, diffY, SDK.Damage, acceleration, actualAccelerationX, actualAccelerationY);
+                SDK.LogLine("TICK:{0:0.00} | Loc:{1},{2} | Instant speed X:{3:0.00} Y:{4:0.00} - Elapsed {5:0.00}  diff X:{6:0.00} Y:{7:0.00}  Dmg:{8} acceleration:{9:0.00}  {10:0.0000} {11:0.0000}", SDK.Time, currentX, currentY, actualSpeedX, actualSpeedY, diffTime, diffX, diffY, SDK.Damage, acceleration, actualAccelerationX, actualAccelerationY);
 
                 _lastTime = currentTime;
                 _lastX = currentX;

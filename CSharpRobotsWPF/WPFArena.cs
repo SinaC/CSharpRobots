@@ -31,6 +31,8 @@ namespace CSharpRobotsWPF
 
         private readonly IReadonlyArena _arena;
 
+        private Grid _backgroundGrid;
+
         private ObservableCollection<WPFRobot> _wpfRobots;
         private ObservableCollection<WPFRobot> _wpfDeadRobots;
         private ObservableCollection<WPFMissile> _wpfMissiles;
@@ -43,6 +45,12 @@ namespace CSharpRobotsWPF
             _arena.ArenaStarted += OnArenaStarted;
             _arena.ArenaStopped += OnArenaStopped;
             _arena.ArenaStep += OnArenaStep;
+
+            _backgroundGrid = CreateBackgroundGrid();
+            Canvas.SetTop(_backgroundGrid, 0);
+            Canvas.SetLeft(_backgroundGrid, 0);
+            Panel.SetZIndex(_backgroundGrid, -10);
+            _mainWindow.BattlefieldCanvas.Children.Add(_backgroundGrid);
         }
 
         public void StartStop()
@@ -50,7 +58,9 @@ namespace CSharpRobotsWPF
             // Test mode without selection needed
             //StartStopInternal(arena => arena.InitializeDoubleMatch(typeof(Robots.SinaC), typeof(Robots.Stinger)));
             //StartStopInternal(arena => arena.InitializeDoubleMatch(typeof(Robots.SinaC), typeof(Robots.Rabbit)));
-            StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Target), 900, 900, 50, 150));
+            //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Stinger), 500, 500, 50, 150));
+            //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Rabbit), 500, 500, 50, 150));
+            StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Target), 500, 500, 50, 150));
         }
 
         public void StartSolo(Type type)
@@ -98,8 +108,13 @@ namespace CSharpRobotsWPF
                     // Initialize
                     initializeArenaAction(_arena);
 
-                    // Create WPF robots
+                    // Reset battlefield
                     _mainWindow.BattlefieldCanvas.Children.Clear();
+                    Canvas.SetTop(_backgroundGrid, 0);
+                    Canvas.SetLeft(_backgroundGrid, 0);
+                    Panel.SetZIndex(_backgroundGrid, -10);
+                    _mainWindow.BattlefieldCanvas.Children.Add(_backgroundGrid);
+                    // Create WPF robots
                     _wpfMissiles = new ObservableCollection<WPFMissile>();
                     _wpfRobots = new ObservableCollection<WPFRobot>();
                     foreach (IReadonlyRobot robot in _arena.Robots.OrderBy(x => x.Team).ThenBy(x => x.Id))
@@ -118,7 +133,7 @@ namespace CSharpRobotsWPF
 
         private void OnArenaStep(IReadonlyArena arena)
         {
-            ExecuteOnUIThread.Invoke(Refresh);
+            ExecuteOnUIThread.InvokeAsync(Refresh); // TODO: invoke sync or async
         }
 
         private void OnArenaStopped(IReadonlyArena arena)
@@ -399,6 +414,41 @@ namespace CSharpRobotsWPF
             grid.Children.Add(ellipse40);
             grid.Children.Add(ellipse20);
             grid.Children.Add(ellipse5);
+            return grid;
+        }
+
+        private Grid CreateBackgroundGrid()
+        {
+            // Create a grid with lines every 100m
+            int lineCount = _arena.Parameters["ArenaSize"] / 100;
+            double cellWidth = _mainWindow.BattlefieldCanvas.Width / lineCount;
+            double cellHeight = _mainWindow.BattlefieldCanvas.Height / lineCount;
+            Grid grid = new Grid();
+            for (int i = 0; i < lineCount; i++)
+            {
+                grid.ColumnDefinitions.Add(new ColumnDefinition
+                {
+                    Width = new GridLength(cellWidth)
+                });
+                grid.RowDefinitions.Add(new RowDefinition
+                {
+                    Height = new GridLength(cellHeight)
+                });
+            }
+            for (int y = 0; y < lineCount; y++)
+                for (int x = 0; x < lineCount; x++)
+                {
+                    Thickness thickness = new Thickness(0, 0, x == lineCount-1 ? 0 : 1, y == lineCount-1 ? 0 : 1);
+                    Border border = new Border
+                        {
+                            BorderBrush = new SolidColorBrush(Colors.Black),
+                            BorderThickness = thickness,
+                            Background = new SolidColorBrush(Colors.Transparent)
+                        };
+                    Grid.SetColumn(border, x);
+                    Grid.SetRow(border, y);
+                    grid.Children.Add(border);
+                }
             return grid;
         }
     }

@@ -10,7 +10,7 @@
 
         public override void Init()
         {
-            SDK.Log("I'm alive ... {0}", SDK.Id);
+            SDK.LogLine("I'm alive ... {0}", SDK.Id);
 
             _arenaSize = SDK.Parameters["ArenaSize"];
 
@@ -20,7 +20,7 @@
 
         public override void Step()
         {
-            SDK.Log("STEP: {0} My position x:{0} y:{1}", SDK.Time, SDK.LocX, SDK.LocY);
+            SDK.LogLine("STEP: {0} My position x:{0} y:{1}", SDK.Time, SDK.LocX, SDK.LocY);
 
             // Find Target
             int targetAngle, targetRange;

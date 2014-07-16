@@ -9,7 +9,7 @@ namespace Robots.Broken
     {
         public override void Init()
         {
-            System.Diagnostics.Debug.WriteLine("NOT YET CONVERTED");
+            SDK.LogLine("NOT YET CONVERTED");
         }
 
         public override void Step()
@@ -25,7 +25,7 @@ namespace Robots.Broken
         {
             if (SDK.LocY < 500)
             {
-                System.Diagnostics.Debug.WriteLine("Going top");
+                SDK.LogLine("Going top");
 
                 SDK.Drive(90, 70);
                 while (SDK.LocY - 500 < 20 && SDK.Speed > 0)
@@ -33,16 +33,16 @@ namespace Robots.Broken
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("Going down");
+                SDK.LogLine("Going down");
 
                 SDK.Drive(270, 70);
                 while (SDK.LocY - 500 > 20 && SDK.Speed > 0)
                     ;
             }
-            System.Diagnostics.Debug.WriteLine("Stopping");
+            SDK.LogLine("Stopping");
             SDK.Drive(0, 0);
 
-            System.Diagnostics.Debug.WriteLine("Main loop");
+            SDK.LogLine("Main loop");
             _damage = SDK.Damage;
             _course = 0;
             _boundary = 995;
@@ -73,7 +73,7 @@ namespace Robots.Broken
         {
             int range;
 
-            System.Diagnostics.Debug.WriteLine("Look {0}", deg);
+            SDK.LogLine("Look {0}", deg);
 
             while ((range = SDK.Scan(deg, 2)) > 0 && range <= 700)
             {
@@ -90,7 +90,7 @@ namespace Robots.Broken
 
         private void Change()
         {
-            System.Diagnostics.Debug.WriteLine("Changing course");
+            SDK.LogLine("Changing course");
 
             if (_course == 0)
             {

@@ -55,7 +55,7 @@ namespace Arena.Internal
         {
             _userRobot = userRobot;
             _userRobot.SDK = this;
-            //_userRobot.Cheat = this; // uncomment this to activate cheats
+            _userRobot.Cheat = this; // uncomment this to activate cheats
             _arena = arena;
             TeamName = teamName;
             Id = id;
@@ -382,7 +382,7 @@ namespace Arena.Internal
             get { return _arena.TeamCount(this); }
         }
 
-        public void Log(string format, params object[] args)
+        public void LogLine(string format, params object[] args)
         {
             Common.Log.WriteLine(Common.Log.LogLevels.Debug, String.Format("Robot {0}[{1}] : {2}", TeamName, Id, String.Format(format, args)));
         }
@@ -566,10 +566,9 @@ namespace Arena.Internal
         
         private static int FixDegrees(int degrees)
         {
+            degrees %= 360;
             if (degrees < 0)
-                degrees = 360+degrees;
-            if (degrees >= 360)
-                degrees %= 360;
+                degrees += 360;
             return degrees;
         }
 

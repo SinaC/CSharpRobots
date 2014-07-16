@@ -283,7 +283,7 @@ namespace Arena.Internal
             //Log.WriteLine(Log.LogLevels.Debug, "Launching missile from Robot {0}[{1}] to {2} {3}", robot.TeamName, robot.Id, degrees, range);
             lock (_missiles)
             {
-                Missile missile = new Missile(robot, _missileId, robot.LocX, robot.LocY, degrees, range);
+                Missile missile = new Missile(robot, MatchStart, _missileId, robot.LocX, robot.LocY, degrees, range);
                 _missiles.Add(missile);
                 _missileId++;
             }

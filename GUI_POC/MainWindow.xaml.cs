@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +16,31 @@ using System.Windows.Shapes;
 
 namespace GUI_POC
 {
+    public class Item : INotifyPropertyChanged
+    {
+        public string Name { get; set; }
+
+        private bool _isSelected;
+        public bool IsSelected
+        {
+            get { return _isSelected; }
+            set
+            {
+                if (_isSelected != value)
+                {
+                    _isSelected = value;
+                    OnPropertyChanged("IsSelected");
+                }
+            }
+        }
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChangedEventHandler handler = PropertyChanged;
+            if (handler != null) handler(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -25,7 +51,29 @@ namespace GUI_POC
         public const int SectorAngle = 70;
         public const int SectorResolution = 20;
 
+        public List<Item> Items;
+
         public MainWindow()
+        {
+            InitializeComponent();
+
+            Items = new List<Item>
+                {
+                    new Item
+                        {
+                            Name = "Name1",
+                            IsSelected = false,
+                        },
+                    new Item
+                        {
+                            Name = "Name2",
+                            IsSelected = false,
+                        }
+                };
+            TestList.DataContext = Items;
+        }
+
+        public void MainWindow2()
         {
             InitializeComponent();
 

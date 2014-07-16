@@ -4,5 +4,17 @@
         Title="MainWindow" Height="525" Width="525">
     <Grid>
         <Canvas x:Name="ArenaCanvas" Width="500" Height="500" PreviewMouseDown="ArenaCanvas_PreviewMouseDown"/>
+        
+        <ListBox x:Name="TestList" ItemsSource="{Binding}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton GroupName="TestGroupName" IsChecked="{Binding IsSelected}">
+                            <TextBlock Text="{Binding Name}"/>
+                        </RadioButton>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
     </Grid>
 </Window>

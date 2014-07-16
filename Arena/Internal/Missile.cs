@@ -6,6 +6,8 @@ namespace Arena.Internal
     {
         private readonly Tick _launchTick;
 
+        private readonly Tick _matchStart;
+
         // When a missile has exploded, it stays in state Explosed during x milliseconds
         private Tick _explosionTick;
         // Current distance
@@ -42,11 +44,12 @@ namespace Arena.Internal
 
         #endregion
 
-        internal Missile(IReadonlyRobot robot, int id, double locX, double locY, int heading, int range)
+        internal Missile(IReadonlyRobot robot, Tick matchStart, int id, double locX, double locY, int heading, int range)
         {
             _launchTick = Tick.Now;
 
             Robot = robot;
+            _matchStart = matchStart;
 
             Id = id;
 
@@ -85,7 +88,8 @@ namespace Arena.Internal
             double diffY = LocY - LaunchLocY;
             double distance = System.Math.Sqrt(diffX*diffX + diffY*diffY);
             double speed = distance/elapsed*1000.0; // in m/s
-            //Log.WriteLine(Log.LogLevels.Debug, "Missile {0} target reached. Speed {1} Distance {2} Range {3}", Id, speed, distance, Range);
+            double tick = Tick.ElapsedSeconds(_matchStart);
+            Log.WriteLine(Log.LogLevels.Debug, "Missile {0} : {1:0.00}  | target reached. Speed {2:0.000} Distance {3:0.000} Range {4}  loc:{5:0.000},{6:0.000}", Id, tick, speed, distance, Range, LocX, LocY);
 
             State = MissileStates.Exploding;
         }

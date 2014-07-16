@@ -51,7 +51,7 @@
             {
                 SDK.Drive(angle + _teta, 40);
                 SDK.Cannon(angle, range);
-                //System.Diagnostics.Debug.WriteLine(" --------------      Angle = {0}            --------------", angle + _teta);
+                //SDK.LogLine(" --------------      Angle = {0}            --------------", angle + _teta);
                 if (_x == xm)
                 {
                     if (_x < 10 || _x > 990)
