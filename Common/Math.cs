@@ -68,5 +68,23 @@
 
             return IsPointInTriangle(pointX, pointY, centerX, centerY, pointFromX, pointFromY, pointToX, pointToY);
         }
+
+        public static double ComputeAngle(double x1, double y1, double x2, double y2)
+        {
+            double diffX = x2 - x1;
+            double diffY = y2 - y1;
+            double angle = System.Math.Atan2(diffY, diffX);
+            if (angle >= System.Math.PI)
+                angle = 2*System.Math.PI - angle;
+            return angle;
+        }
+
+        public static double FixDegrees(double degrees)
+        {
+            degrees %= 360.0;
+            if (degrees < 0)
+                degrees += 360.0;
+            return degrees;
+        }
     }
 }

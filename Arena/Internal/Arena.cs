@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Remoting;
 using System.Threading;
 using System.Threading.Tasks;
 using Common;
@@ -297,10 +298,11 @@ namespace Arena.Internal
 
         public int Scan(Robot robot, int degrees, int resolution)
         {
-            double nearest = double.MaxValue;
+            double nearest = Double.MaxValue;
             Robot target = null;
-            foreach (Robot r in _robots.Where(x => x != robot && x.State == RobotStates.Running))
+            foreach (Robot r in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
             {
+                // Sector method
                 bool isInSector = Common.Math.IsInSector(robot.LocX, robot.LocY, degrees, resolution, r.LocX, r.LocY);
                 if (isInSector)
                 {
@@ -316,6 +318,33 @@ namespace Arena.Internal
             //    Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] found Robot {2}[{3}]", robot.TeamName, robot.Id, target.Id, target.Team);
             //else
             //    Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] failed to find someone else", robot.TeamName, robot.Id);
+
+            double nearest2 = Double.MaxValue;
+            Robot target2 = null;
+            foreach (Robot r in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
+            {
+                // Angle method
+                double angleRadians = Common.Math.ComputeAngle(robot.LocX, robot.LocY, r.LocX, r.LocY);
+                double angleDegrees = Common.Math.ToDegrees(angleRadians);
+                double fixedAngle = Common.Math.FixDegrees(angleDegrees);
+                double diff = System.Math.Abs(fixedAngle - degrees);
+                if (diff < resolution/2.0)
+                {
+                    double distance = Common.Math.Distance(robot.LocX, robot.LocY, r.LocX, r.LocY);
+                    if (distance < nearest2)
+                    {
+                        nearest2 = distance;
+                        target2 = r;
+                    }
+                }
+            }
+
+            //Debug.Assert(target == target2 && System.Math.Abs(nearest-nearest2) < 0.0001);
+            if (target != target2 || System.Math.Abs(nearest - nearest2) > 0.0001)
+            {
+                Log.WriteLine(Log.LogLevels.Error, "Different result for sector and angle method: {0:0.0000}|{1:0.0000}", nearest, nearest2);
+            }
+
             return target != null ? (int)System.Math.Round(nearest) : 0;
         }
 

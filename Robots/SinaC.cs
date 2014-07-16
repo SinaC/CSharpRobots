@@ -3,6 +3,8 @@ using SDK;
 
 namespace Robots
 {
+    // TODO: fix linear interpolation: when I move and target doesn't move estimated enemy speed is wrong
+
     // Behaviour:
     //  Track previous enemy, if not found, search a new enemy (don't consider teammate as enemy)
     //  Fire on tracked/found enemy using linear interpolation if enemy tracked, using direct fire if new enemy
@@ -11,7 +13,9 @@ namespace Robots
     public class SinaC : Robot
     {
         // Robot parameters
+        private const double Pi = 3.14159;
         private const bool UpgradedPrecision = true;
+        private const bool UseInterpolation = false;
         private const double FriendRange = 20;
         private const double TrackStepTime = 0.25;
 
@@ -100,8 +104,8 @@ namespace Robots
             SaveCurrentState();
 
             //MoveToCenter();
-            //SDK.Drive(180, 50);
-            Move();
+            SDK.Drive(0, 100);
+            //Move();
         }
 
         public override void Step()
@@ -136,7 +140,7 @@ namespace Robots
             if (elapsedCannonTime >= 1) // 1 second since last successfull shoot
             {
                 // Fire on target
-                if (newEnemy)
+                if (newEnemy || !UseInterpolation)
                     ComputeCannonNoInterpolationInformation();
                 else
                     ComputeCannonInterpolatedInformation(elapsedCannonTime); // this use current and previous state
@@ -155,7 +159,7 @@ namespace Robots
                 SDK.LogLine("Damage detected: hit time {0} estimated shoot time {1}", _lastHitTime, _estimatedEnemyCannonTime);
             }
 
-            Move();
+            //Move();
         }
 
         #region Current state and shared informations
@@ -353,7 +357,7 @@ namespace Robots
             double pX = _currentEnemyX + _currentEnemySpeedX*t;
             double pY = _currentEnemyY + _currentEnemySpeedY*t;
 
-            _fireEnemyAngle = (int)SDK.Round(Angle(pX, pY, _currentLocX, _currentLocY));
+            _fireEnemyAngle = (int)SDK.Round(Angle(_currentLocX, _currentLocY, pX, pY));
             _fireEnemyRange = (int)SDK.Round(Distance(pX, pY, _currentLocX, _currentLocY));
 
             SDK.LogLine("{0:0.00} - estimated position at {1:0.00} {2:0.0000} {3:0.0000}  A:{4:0.0000} R:{5:0.0000}", SDK.Time, SDK.Time + t, pX, pY, FixAngle(_fireEnemyAngle), _fireEnemyRange);
@@ -428,7 +432,7 @@ namespace Robots
             }
             else if (distanceToWall < 30.0) // Escape from wall, moving to center
             {
-                _driveAngle = Angle(_arenaSize/2.0, _arenaSize/2.0, _currentLocX, _currentLocY);
+                _driveAngle = Angle(_currentLocX, _currentLocY, _arenaSize/2.0, _arenaSize/2.0);
                 Drive(_driveAngle, 100);
                 _lastRandomTurn = SDK.Time;
                 SDK.LogLine("Driving to center away from wall at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
@@ -470,7 +474,7 @@ namespace Robots
 
         private void MoveToCenter()
         {
-            _driveAngle = Angle(_arenaSize / 2.0, _arenaSize / 2.0, _currentLocX, _currentLocY);
+            _driveAngle = Angle(_currentLocX, _currentLocY, _arenaSize / 2.0, _arenaSize / 2.0);
             Drive(_driveAngle, 50);
             SDK.LogLine("Go to center {0:0.00} {1}", _driveAngle, SDK.Speed);
         }
@@ -520,9 +524,11 @@ namespace Robots
 
         private double Angle(double x1, double y1, double x2, double y2)
         {
-            double diffX = x1 - x2;
-            double diffY = y1 - y2;
+            double diffX = x2 - x1;
+            double diffY = y2 - y1;
             double angleRadians = SDK.ATan2(diffY, diffX);
+            if (angleRadians >= Pi)
+                angleRadians = 2 * Pi - angleRadians;
             return SDK.Rad2Deg(angleRadians);
         }
 
