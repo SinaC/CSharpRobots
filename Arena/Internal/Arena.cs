@@ -328,7 +328,7 @@ namespace Arena.Internal
                 double angleDegrees = Common.Math.ToDegrees(angleRadians);
                 double fixedAngle = Common.Math.FixDegrees(angleDegrees);
                 double diff = System.Math.Abs(fixedAngle - degrees);
-                if (diff < resolution/2.0)
+                if (diff <= resolution/2.0)
                 {
                     double distance = Common.Math.Distance(robot.LocX, robot.LocY, r.LocX, r.LocY);
                     if (distance < nearest2)
@@ -342,7 +342,7 @@ namespace Arena.Internal
             //Debug.Assert(target == target2 && System.Math.Abs(nearest-nearest2) < 0.0001);
             if (target != target2 || System.Math.Abs(nearest - nearest2) > 0.0001)
             {
-                Log.WriteLine(Log.LogLevels.Error, "Different result for sector and angle method: {0:0.0000}|{1:0.0000}", nearest, nearest2);
+                Log.WriteLine(Log.LogLevels.Error, "Different result for sector and angle method: {0:0.0000}|{1:0.0000}   param angle: {2} res: {3}", nearest, nearest2, degrees, resolution);
             }
 
             return target != null ? (int)System.Math.Round(nearest) : 0;

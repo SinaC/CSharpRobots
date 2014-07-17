@@ -5,7 +5,7 @@
     <Grid>
         <Canvas x:Name="ArenaCanvas" Width="500" Height="500" PreviewMouseDown="ArenaCanvas_PreviewMouseDown"/>
         
-        <ListBox x:Name="TestList" ItemsSource="{Binding}">
+        <!--<ListBox x:Name="TestList" ItemsSource="{Binding}">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal">
@@ -15,6 +15,6 @@
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>
-        </ListBox>
+        </ListBox>-->
     </Grid>
 </Window>

@@ -12,6 +12,20 @@ namespace Robots
     //  Else, square wave pattern trying to change direction to avoid missile
     public class SinaC : Robot
     {
+        private enum MoveModes
+        {
+            // Don't move
+            Still,
+            // Move from one corner to another
+            Corner,
+            // Simple mode: go to target if far and random if in range
+            Simple,
+            // Shark mode: go to predefined destination and then circle
+            GoToDestination, // -> DecreaseSpeed
+            DecreaseSpeed, // -> Circling
+            Circling, // -> GoToDestination
+        };
+
         // Robot parameters
         private const double Pi = 3.14159;
         private const bool UpgradedPrecision = true;
@@ -30,6 +44,18 @@ namespace Robots
         private int _teamCount; // number of members in team
         private int _id; // own id
         private double _fireCount;
+        private int _fireEnemyAngle;
+        private int _fireEnemyRange;
+        private MoveModes _moveMode;
+        private double _driveAngle;
+        
+        // Simple move
+        private double _lastRandomTurn;
+        
+        // Shark move
+        private int _sector;
+        private int _destinationX;
+        private int _destinationY;
 
         // Current state
         private int _currentLocX;
@@ -40,23 +66,19 @@ namespace Robots
         private double _currentEnemyY;
         private double _currentEnemySpeedX;
         private double _currentEnemySpeedY;
-        private int _fireEnemyAngle;
-        private int _fireEnemyRange;
-        private double _driveAngle;
-        private double _lastRandomTurn;
 
         // Previous state
         private int _previousLocX;
         private int _previousLocY;
-        private double _previousTrackTime;
-        private double _previousCannonTime;
-        private int _previousDamage;
         private double _previousEnemyAngle;
         private double _previousEnemyRange;
         private double _previousEnemyX;
         private double _previousEnemyY;
         private double _previousEnemySpeedX;
         private double _previousEnemySpeedY;
+        private double _previousTrackTime;
+        private double _previousCannonTime;
+        private int _previousDamage;
 
         // Heuristics
         private double _lastHitTime;
@@ -103,9 +125,20 @@ namespace Robots
                 FireOnEnemy(_maxExplosionRange, _maxExplosionRangePlusCannonRange);
             SaveCurrentState();
 
-            //MoveToCenter();
-            SDK.Drive(0, 100);
-            //Move();
+            // Shark/Corner mode
+            if (_teamCount == 1)
+            {
+                _destinationX = Clamp(_currentLocX, 100, _arenaSize - 100);
+                _destinationY = Clamp(_currentLocY, 100, _arenaSize - 100);
+            }
+            else
+            {
+                _destinationX = _currentLocX < 500 ? 100 : 900;
+                _destinationY = _currentLocY < 500 ? 100 : 900;
+            }
+            _moveMode = MoveModes.Corner;
+
+            Move();
         }
 
         public override void Step()
@@ -159,7 +192,7 @@ namespace Robots
                 SDK.LogLine("Damage detected: hit time {0} estimated shoot time {1}", _lastHitTime, _estimatedEnemyCannonTime);
             }
 
-            //Move();
+            Move();
         }
 
         #region Current state and shared informations
@@ -405,6 +438,33 @@ namespace Robots
 
         private void Move()
         {
+            switch(_moveMode)
+            {
+                case MoveModes.Still:
+                    SDK.Drive(0,0);
+                    break;
+                case MoveModes.Corner:
+                    CornerMove();
+                    break;
+                case MoveModes.Simple:
+                    SimpleMove();
+                    break;
+                case MoveModes.GoToDestination:
+                    GoToDestination();
+                    break;
+                case MoveModes.DecreaseSpeed:
+                    DecreaseSpeed();
+                    break;
+                case MoveModes.Circling:
+                    Circling();
+                    break;
+            }
+        }
+
+        #region Simple
+
+        private void SimpleMove()
+        {
             double distanceToEnemy = Distance(_currentLocX, _currentLocY, _currentEnemyX, _currentEnemyY);
 
             if (distanceToEnemy > _maxExplosionRangePlusCannonRange)
@@ -427,7 +487,7 @@ namespace Robots
                 if (SDK.Time - _lastRandomTurn >= 0.45 * timeMultiplier || distanceToWall > 30.0) // But only if I not turned too recently or very close to wall
                 {
                     Drive(_driveAngle, 50);
-                    SDK.LogLine("Slowing down {0:0.00} {1}", _driveAngle, SDK.Speed);
+                    //SDK.LogLine("Slowing down {0:0.00} {1}", _driveAngle, SDK.Speed);
                 }
             }
             else if (distanceToWall < 30.0) // Escape from wall, moving to center
@@ -435,7 +495,7 @@ namespace Robots
                 _driveAngle = Angle(_currentLocX, _currentLocY, _arenaSize/2.0, _arenaSize/2.0);
                 Drive(_driveAngle, 100);
                 _lastRandomTurn = SDK.Time;
-                SDK.LogLine("Driving to center away from wall at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
+                //SDK.LogLine("Driving to center away from wall at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
             }
                 //SDK.LogLine("t0:{0:0.0000}  t1:{1:0.0000}  diff:{2:0.0000}", t0, t1, diffT);
             else
@@ -452,12 +512,12 @@ namespace Robots
                     if (i == 0)
                     {
                         _driveAngle += 90.0;
-                        SDK.LogLine("Turning +1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
+                        //SDK.LogLine("Turning +1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
                     }
                     else
                     {
                         _driveAngle -= 90.0;
-                        SDK.LogLine("Turning -1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
+                        //SDK.LogLine("Turning -1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
                     }
                     Drive(_driveAngle, 100);
                     _lastRandomTurn = SDK.Time;
@@ -469,19 +529,167 @@ namespace Robots
         {
             _driveAngle = _currentEnemyAngle;
             Drive(_driveAngle, 100);
-            SDK.LogLine("Move to enemy at full speed");
-        }
-
-        private void MoveToCenter()
-        {
-            _driveAngle = Angle(_currentLocX, _currentLocY, _arenaSize / 2.0, _arenaSize / 2.0);
-            Drive(_driveAngle, 50);
-            SDK.LogLine("Go to center {0:0.00} {1}", _driveAngle, SDK.Speed);
+            //SDK.LogLine("Move to enemy at full speed");
         }
 
         #endregion
 
+        #region Corner
+
+        private void CornerMove()
+        {
+            double distanceToDestination = Distance(_currentLocX, _currentLocY, _destinationX, _destinationY);
+            if (distanceToDestination < 75)
+            {
+                // Change corner
+                if (_currentLocX < 200 && _currentLocY < 200) // top left, go to top right
+                    _destinationX = _arenaSize - 100;
+                else if (_currentLocX > _arenaSize - 200 && _currentLocY < 200) // top right, go to bottom right
+                    _destinationY = _arenaSize - 100;
+                else if (_currentLocX > _arenaSize - 200 && _currentLocY > _arenaSize - 200) // bottom right, go to bottom left
+                    _destinationX = 100;
+                else if (_currentLocX < 200 && _currentLocY > _arenaSize - 200) // bottom left, go to top left
+                    _destinationY = 100;
+            }
+            _driveAngle = Angle(_currentLocX, _currentLocY, _destinationX, _destinationY);
+            Drive(_driveAngle, 50);
+        }
+
+        #endregion
+
+        #region Shark
+
+        private void GoToDestination()
+        {
+            if (FarFromDestination())
+            {
+                _driveAngle = Angle(_currentLocX, _currentLocY, _destinationX, _destinationY);
+                Drive(_driveAngle, 100);
+                //SDK.LogLine("Far from destination {0},{1} go to this destination at full speed {2:0.00} {3}", _destinationX, _destinationY, _driveAngle, SDK.Speed);
+            }
+            else
+                _moveMode = MoveModes.DecreaseSpeed;
+        }
+
+        private void DecreaseSpeed()
+        {
+            if (SDK.Speed > 50)
+            {
+                Drive(_driveAngle, 50);
+                //SDK.LogLine("Destination reached, slowing down {0:0.00} {1}", _driveAngle, SDK.Speed);
+            }
+            else
+                _moveMode = MoveModes.Circling;
+        }
+
+        private void Circling()
+        {
+            if (SDK.Speed > 0)
+            {
+                if (_currentLocX > _destinationX + 15)
+                {
+                    if (_currentLocY > _destinationY + 15)
+                    {
+                        if (_sector != 1)
+                        {
+                            _sector = 1;
+                            SDK.Drive(315, 50);
+                        }
+                    }
+                    else if (_currentLocY > _destinationY - 15)
+                    {
+                        if (_sector != 2)
+                        {
+                            _sector = 2;
+                            SDK.Drive(270, 50);
+                        }
+                    }
+                    else if (_sector != 3)
+                    {
+                        _sector = 3;
+                        SDK.Drive(225, 50);
+                    }
+                }
+                else if (_currentLocX > _destinationX - 15)
+                {
+                    if (_currentLocY > _destinationY + 15)
+                    {
+                        if (_sector != 4)
+                        {
+                            _sector = 4;
+                            SDK.Drive(0, 50);
+                        }
+                    }
+                    else if (_currentLocY > _destinationY - 15)
+                    {
+                        if (_sector != 5)
+                        {
+                            _sector = 5;
+                            SDK.Drive(45, 50);
+                        }
+                    }
+                    else if (_sector != 6)
+                    {
+                        _sector = 6;
+                        SDK.Drive(180, 50);
+                    }
+                }
+                else if (_currentLocY > _destinationY + 15)
+                {
+                    if (_sector != 7)
+                    {
+                        _sector = 7;
+                        SDK.Drive(45, 50);
+                    }
+                }
+                else if (_currentLocY > _destinationY - 15)
+                {
+                    if (_sector != 8)
+                    {
+                        _sector = 8;
+                        SDK.Drive(90, 50);
+                    }
+                }
+                else if (_sector != 9)
+                {
+                    _sector = 9;
+                    SDK.Drive(135, 50);
+                }
+            }
+            else
+                _moveMode = MoveModes.GoToDestination;
+        }
+
+        public bool FarFromDestination()
+        {
+            int diffX = _currentLocX - _destinationX;
+            int diffY = _currentLocY - _destinationY;
+            return diffX * diffX + diffY * diffY > 5500;
+        }
+
+        #endregion
+
+        #endregion
+
         #region Helpers
+
+        private double Clamp(double value, double min, double max)
+        {
+            if (value < min)
+                return min;
+            if (value > max)
+                return max;
+            return value;
+        }
+
+        private int Clamp(int value, int min, int max)
+        {
+            if (value < min)
+                return min;
+            if (value > max)
+                return max;
+            return value;
+        }
 
         private void Drive(double angle, int speed)
         {
