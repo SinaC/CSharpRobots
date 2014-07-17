@@ -644,6 +644,83 @@ namespace Arena.Internal
             }
         }
 
+        private void Step2()
+        {
+            if (State == ArenaStates.Running)
+            {
+                Tick now = Tick.Now;
+                double elapsed = Tick.TotalSeconds(now, MatchStart);
+
+                if (elapsed > ParametersSingleton.MaxMatchTime)
+                {
+                    Log.WriteLine(Log.LogLevels.Info, "Match timeout");
+                    StopMatch(ArenaStates.Timeout);
+                }
+                else
+                {
+                    // Get real step time
+                    double realStepTime = _lastStepTick == null ? ParametersSingleton.StepDelay : Tick.TotalSeconds(now, _lastStepTick);
+                    _lastStepTick = now;
+
+                    //Log.WriteLine(Log.LogLevels.Debug, "STEP: {0} {1:0.0000}  {2:0.00}", _stepCount, elapsed, realStepTime);
+                    _stepCount++;
+
+                    // Update missile position and manage explosion
+                    lock (_missiles)
+                    {
+                        foreach (Missile missile in _missiles)
+                        {
+                            if (missile.State == MissileStates.Flying)
+                            {
+                                missile.Update(realStepTime);
+
+                                // if missile has exploded, inflict damage on all nearby robots, according to hit range
+                                if (missile.State == MissileStates.Exploding)
+                                {
+                                    Robot missileRobot = missile.Robot as Robot;
+                                    foreach (Robot robot in _robots.Where(x => x.State == RobotStates.Running))
+                                    {
+                                        // Explosion use robot location at explosion time
+                                        double realLocX, realLocY, realSpeed;
+                                        robot.ComputeNewLocation(missile._double_explodingTime, out realLocX, out realLocY, out realSpeed);
+                                        double distance = Common.Math.Distance(realLocX, realLocY, missile.LocX, missile.LocY);
+                                        foreach (DamageByRange damageByRange in _damageByRanges)
+                                            if (distance < damageByRange.Range)
+                                            {
+                                                if (missileRobot != null)
+                                                    missileRobot.Statistics.Increment(String.Format("DAMAGE_RANGE_{0}", damageByRange.Range));
+                                                if (robot.Team == missile.Robot.Team)
+                                                {
+                                                    robot.Statistics.Increment("FRIENDLY_DAMAGE_TAKEN");
+                                                    if (missileRobot != null)
+                                                        missileRobot.Statistics.Increment("FRIENDLY_DAMAGE");
+                                                    //Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000} FRIENDLY DAMAGE", missile.Robot.TeamName, missile.Robot.Id, robot.TeamName, robot.Id, damageByRange.Damage, distance);
+                                                }
+                                                //else
+                                                //    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] damages Robot {2}[{3}] dealing {4} damage, distance {5:0.000}", missile.Robot.TeamName, missile.Robot.Id, robot.TeamName, robot.Id, damageByRange.Damage, distance);
+                                                robot.Statistics.Increment(String.Format("DAMAGE_TAKEN_RANGE_{0}", damageByRange.Range));
+                                                robot.TakeDamage(damageByRange.Damage);
+                                                break; // missile in this range, no need to check other ranges
+                                            }
+                                    }
+
+                                    missile.ExplosionCompleted();
+                                }
+                            }
+                            else if (missile.State == MissileStates.Exploded)
+                                missile.UpdateExploded(ParametersSingleton.ExplosionDisplayDelay);
+                        }
+                        // Remove deleted missile
+                        _missiles.RemoveAll(x => x.State == MissileStates.Deleted);
+                    }
+
+                    // Update robots
+                    foreach (Robot robot in _robots.Where(x => x.State == RobotStates.Running))
+                        robot.Update(realStepTime);
+                }
+            }
+        }
+
         private void FireOnArenaStarted()
         {
             if (ArenaStarted != null)

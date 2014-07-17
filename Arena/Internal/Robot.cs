@@ -612,20 +612,30 @@ namespace Arena.Internal
         private double _double_cos_driveAngle;
         private double _double_sin_driveAngle;
 
-
-        private void Update(double dt)
+        public void Update(double dt)
         {
-            double delta = dt*ParametersSingleton.MaxAcceleration; // speed increase due to acceleration v = a.t
-            double travelledDistanceDueToAcceleration = 0.5*delta*dt; // distance increase due to acceleration d = 0.5.a.t.t
+            //
+            bool hit = ComputeNewLocation(dt, out _double_locX, out _double_locY, out _double_currentSpeed);
+            //
+            if (hit)
+            {
+                _double_desiredSpeed = 0;
+                TakeDamage(ParametersSingleton.CollisionDamage);
+            }
+        }
 
-            // Put following code in a function returning new location using delta, reused in missile damage computation
+        public bool ComputeNewLocation(double dt, out double newLocationX, out double newLocationY, out double newSpeed)
+        {
+            double delta = dt * ParametersSingleton.MaxAcceleration; // speed increase due to acceleration v = a.t
+            double travelledDistanceDueToAcceleration = 0.5 * delta * dt; // distance increase due to acceleration d = 0.5.a.t.t
 
-            double travelledDistance = dt*_double_currentSpeed; // robot relocates due to its speed d = v *t
+            double travelledDistance = dt * _double_currentSpeed; // relocates due to its speed d = v.t
             double speedDiff = _double_desiredSpeed - _double_currentSpeed; // difference between desired and current speed
             if (System.Math.Abs(speedDiff) < Tolerance) // desired speed reached
             {
-                _double_locX += travelledDistance*_double_cos_driveAngle; // increase along x axis
-                _double_locY += travelledDistance*_double_sin_driveAngle; // increase along y axis
+                newLocationX = _double_locX + travelledDistance * _double_cos_driveAngle; // increase along x axis
+                newLocationY = _double_locY + travelledDistance * _double_sin_driveAngle; // increase along y axis
+                newSpeed = _double_currentSpeed;
             }
             else
             {
@@ -634,18 +644,18 @@ namespace Arena.Internal
                     double nextSpeed = _double_currentSpeed + delta; // next speed
                     if (nextSpeed > _double_desiredSpeed) // overstep
                     {
-                        double t1 = speedDiff/ParametersSingleton.MaxAcceleration; // time when we would overstep
+                        double t1 = speedDiff / ParametersSingleton.MaxAcceleration; // time when we would overstep
                         double t2 = dt - t1; // remaining time to finish the step
-                        double compositeTravelledDistance = _double_currentSpeed*t1 + 0.5*ParametersSingleton.MaxAcceleration*t1*t1 + _double_desiredSpeed*t2; // travelled distance using current speed and desired speed
-                        _double_locX += compositeTravelledDistance*_double_cos_driveAngle; // relocation along x axis
-                        _double_locY += compositeTravelledDistance * _double_sin_driveAngle; // relocation along y axis
-                        _double_currentSpeed = _double_desiredSpeed; // no speed overstepping
+                        double compositeTravelledDistance = _double_currentSpeed * t1 + 0.5 * ParametersSingleton.MaxAcceleration * t1 * t1 + _double_desiredSpeed * t2; // travelled distance using current speed and desired speed
+                        newLocationX = _double_locX + compositeTravelledDistance * _double_cos_driveAngle; // relocation along x axis
+                        newLocationY = _double_locY + compositeTravelledDistance * _double_sin_driveAngle; // relocation along y axis
+                        newSpeed = _double_desiredSpeed; // no speed overstepping
                     }
                     else // no overstep
                     {
-                        _double_locX += (travelledDistanceDueToAcceleration + travelledDistance) * _double_cos_driveAngle; // relocation along x axis
-                        _double_locY += (travelledDistanceDueToAcceleration + travelledDistance) * _double_sin_driveAngle; // relocation along y axis
-                        _double_currentSpeed = nextSpeed; // speed at the end of time step
+                        newLocationX = _double_locX + (travelledDistanceDueToAcceleration + travelledDistance) * _double_cos_driveAngle; // relocation along x axis
+                        newLocationY = _double_locY + (travelledDistanceDueToAcceleration + travelledDistance) * _double_sin_driveAngle; // relocation along y axis
+                        newSpeed = nextSpeed; // speed at the end of time step
                     }
                 }
                 else // deacceleration
@@ -653,62 +663,58 @@ namespace Arena.Internal
                     double nextSpeed = _double_currentSpeed + delta; // next speed
                     if (nextSpeed < _double_desiredSpeed) // overstep
                     {
-                        double t1 = -speedDiff/ParametersSingleton.MaxAcceleration; // time when we would overstep (sign change is faster than abs)
+                        double t1 = -speedDiff / ParametersSingleton.MaxAcceleration; // time when we would overstep (sign change is faster than abs)
                         double t2 = dt - t1; // remaining time to finish the step
                         double compositeTravelledDistance = _double_currentSpeed * t1 - 0.5 * ParametersSingleton.MaxAcceleration * t1 * t1 + _double_desiredSpeed * t2; // travelled distance using current speed and desired speed
-                        _double_locX += compositeTravelledDistance * _double_cos_driveAngle;// relocation along x axis
-                        _double_locY += compositeTravelledDistance * _double_sin_driveAngle;// relocation along y axis
-                        _double_currentSpeed = _double_desiredSpeed; // no speed overstepping
+                        newLocationX = _double_locX + compositeTravelledDistance * _double_cos_driveAngle;// relocation along x axis
+                        newLocationY = _double_locY + compositeTravelledDistance * _double_sin_driveAngle;// relocation along y axis
+                        newSpeed = _double_desiredSpeed; // no speed overstepping
                     }
                     else
                     {
-                        _double_locX += (travelledDistanceDueToAcceleration - travelledDistance) * _double_cos_driveAngle; // relocation along x axis
-                        _double_locY += (travelledDistanceDueToAcceleration - travelledDistance) * _double_sin_driveAngle; // relocation along y axis
-                        _double_currentSpeed = nextSpeed; // speed at the end of time step
+                        newLocationX = _double_locX + (travelledDistanceDueToAcceleration - travelledDistance) * _double_cos_driveAngle; // relocation along x axis
+                        newLocationY = _double_locY + (travelledDistanceDueToAcceleration - travelledDistance) * _double_sin_driveAngle; // relocation along y axis
+                        newSpeed = nextSpeed; // speed at the end of time step
                     }
                 }
             }
 
-            CollisionWithWall();
-        }
-
-        private void CollisionWithWall()
-        {
+            // Check collision with wall
             bool hit = false;
-            if (_double_locX < 0)
+            if (newLocationX < 0)
             {
                 hit = true;
                 if (System.Math.Abs(_double_cos_driveAngle) >= Tolerance)
-                    _double_locY -= _double_locX * _double_sin_driveAngle / _double_cos_driveAngle;
-                _double_locX = 0;
+                    newLocationY = newLocationY - newLocationX * _double_sin_driveAngle / _double_cos_driveAngle;
+                newLocationX = 0;
+                newSpeed = 0;
             }
-            else if (_double_locX > ParametersSingleton.ArenaSize)
+            else if (newLocationX > ParametersSingleton.ArenaSize)
             {
                 hit = true;
                 if (System.Math.Abs(_double_cos_driveAngle) >= Tolerance)
-                    _double_locY += (ParametersSingleton.ArenaSize - _double_locX) * _double_sin_driveAngle / _double_cos_driveAngle;
-                _double_locX = ParametersSingleton.ArenaSize;
+                    newLocationY = newLocationY + (ParametersSingleton.ArenaSize - newLocationX) * _double_sin_driveAngle / _double_cos_driveAngle;
+                newLocationX = ParametersSingleton.ArenaSize;
+                newSpeed = 0;
             }
-            if (_double_locY < 0)
+            if (newLocationY < 0)
             {
                 hit = true;
                 if (System.Math.Abs(_double_sin_driveAngle) >= Tolerance)
-                    _double_locX -= _double_locY*_double_cos_driveAngle/_double_sin_driveAngle;
-                _double_locY = 0;
+                    newLocationX = newLocationX - newLocationY * _double_cos_driveAngle / _double_sin_driveAngle;
+                newLocationY = 0;
+                newSpeed = 0;
             }
-            else if (_double_locY > ParametersSingleton.ArenaSize)
+            else if (newLocationY > ParametersSingleton.ArenaSize)
             {
                 hit = true;
                 if (System.Math.Abs(_double_sin_driveAngle) >= Tolerance)
-                    _double_locX += (ParametersSingleton.ArenaSize-_double_locY) * _double_cos_driveAngle / _double_sin_driveAngle;
-                _double_locY = ParametersSingleton.ArenaSize;
+                    newLocationX = newLocationX + (ParametersSingleton.ArenaSize - newLocationY) * _double_cos_driveAngle / _double_sin_driveAngle;
+                newLocationY = ParametersSingleton.ArenaSize;
+                newSpeed = 0;
             }
-            if (hit)
-            {
-                _double_currentSpeed = 0;
-                _double_desiredSpeed = 0;
-                TakeDamage(ParametersSingleton.CollisionDamage);
-            }
+
+            return hit;
         }
     }
 }
