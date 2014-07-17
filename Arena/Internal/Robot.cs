@@ -10,6 +10,8 @@ namespace Arena.Internal
 {
     internal class Robot : ISDKRobot, ISDKCheat, IReadonlyRobot
     {
+        private const double Tolerance = 0.00001;
+
         private CancellationTokenSource _cancellationTokenSource;
         //private readonly ManualResetEvent _stopEvent;
         private Task _mainTask;
@@ -152,7 +154,7 @@ namespace Arena.Internal
                         _acceleration = _desiredSpeed;
                     }
                     else
-                        Speed = (int)_acceleration;
+                        Speed = (int) _acceleration;
 
                     //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] slowed. Updated Speed {2} Desired Speed {3} Acceleration {4}", TeamName, Id, Speed, _desiredSpeed, _acceleration);
                 }
@@ -167,7 +169,7 @@ namespace Arena.Internal
                         _acceleration = _desiredSpeed;
                     }
                     else
-                        Speed = (int)_acceleration;
+                        Speed = (int) _acceleration;
 
                     //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}] accelerated. Updated Speed {2} Desired Speed {3} Acceleration {4}", TeamName, Id, Speed, _desiredSpeed, _acceleration);
                 }
@@ -205,7 +207,7 @@ namespace Arena.Internal
             {
                 //CurrentDistance += ((MaxSpeed*Speed/100.0)*Arena.StepDelay)/1000.0; // new speed is considered only once by simulation step   GRRRRRR 2 hours lost to find we have to compute real elapsed time between 2 steps because System.Timers.Timer is not precise enough
                 // Speed is in percentage of MaxSpeed, realStepTime is in milliseconds and MaxSpeed is in m/s
-                _currentDistance += ((ParametersSingleton.MaxSpeed * Speed / 100.0) * realStepTime) / 1000.0;
+                _currentDistance += ((ParametersSingleton.MaxSpeed*Speed/100.0)*realStepTime)/1000.0;
                 double newX, newY;
                 Common.Math.ComputePoint(_originX, _originY, _currentDistance, Heading, out newX, out newY);
                 LocX = newX;
@@ -271,7 +273,7 @@ namespace Arena.Internal
         {
             get
             {
-                return (int)System.Math.Round(LocX);
+                return (int) System.Math.Round(LocX);
             }
         }
 
@@ -279,7 +281,7 @@ namespace Arena.Internal
         {
             get
             {
-                return (int)System.Math.Round(LocY);
+                return (int) System.Math.Round(LocY);
             }
         }
 
@@ -304,7 +306,7 @@ namespace Arena.Internal
         {
             get
             {
-                return (int)LocX;
+                return (int) LocX;
             }
         }
 
@@ -312,7 +314,7 @@ namespace Arena.Internal
         {
             get
             {
-                return (int)LocY;
+                return (int) LocY;
             }
         }
 
@@ -360,6 +362,7 @@ namespace Arena.Internal
 
             _desiredHeading = degrees;
             _desiredSpeed = speed;
+            // TODO: give a speed boost (directly set to 1) if current speed is 0
             _arena.Drive(this, degrees, speed);
         }
 
@@ -521,12 +524,12 @@ namespace Arena.Internal
 
                     State = RobotStates.Running;
                     //_userRobot.Main();
-                    while(true)
+                    while (true)
                     {
                         //
                         sw.Reset();
                         sw.Start();
-                        
+
                         // Step is called only if robot is alive
                         if (Damage < ParametersSingleton.MaxDamage)
                             _userRobot.Step();
@@ -534,7 +537,7 @@ namespace Arena.Internal
 
                         sw.Stop();
                         double elapsed = sw.ElapsedMilliseconds;
-                        int sleepTime = (int)(ParametersSingleton.StepDelay - elapsed);
+                        int sleepTime = (int) (ParametersSingleton.StepDelay - elapsed);
                         if (sleepTime < 0)
                             sleepTime = 1;
                         //Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Elapsed {0:0.0000} -> Sleep {1}", elapsed, sleepTime);
@@ -564,7 +567,7 @@ namespace Arena.Internal
                 Common.Log.WriteLine(Common.Log.LogLevels.Info, "Robot {0}[{1}] task stopped.", TeamName, Id);
             }
         }
-        
+
         private static int FixDegrees(int degrees)
         {
             degrees %= 360;
@@ -598,6 +601,114 @@ namespace Arena.Internal
             if (speed > 100)
                 speed = 100;
             return speed;
+        }
+
+
+        private double _double_desiredSpeed; // in m/s
+        private double _double_locX;
+        private double _double_locY;
+        private double _double_driveAngle; // in radians
+        private double _double_currentSpeed; // in m/s
+        private double _double_cos_driveAngle;
+        private double _double_sin_driveAngle;
+
+
+        private void Update(double dt)
+        {
+            double delta = dt*ParametersSingleton.MaxAcceleration; // speed increase due to acceleration v = a.t
+            double travelledDistanceDueToAcceleration = 0.5*delta*dt; // distance increase due to acceleration d = 0.5.a.t.t
+
+            // Put following code in a function returning new location using delta, reused in missile damage computation
+
+            double travelledDistance = dt*_double_currentSpeed; // robot relocates due to its speed d = v *t
+            double speedDiff = _double_desiredSpeed - _double_currentSpeed; // difference between desired and current speed
+            if (System.Math.Abs(speedDiff) < Tolerance) // desired speed reached
+            {
+                _double_locX += travelledDistance*_double_cos_driveAngle; // increase along x axis
+                _double_locY += travelledDistance*_double_sin_driveAngle; // increase along y axis
+            }
+            else
+            {
+                if (speedDiff > 0) // acceleration
+                {
+                    double nextSpeed = _double_currentSpeed + delta; // next speed
+                    if (nextSpeed > _double_desiredSpeed) // overstep
+                    {
+                        double t1 = speedDiff/ParametersSingleton.MaxAcceleration; // time when we would overstep
+                        double t2 = dt - t1; // remaining time to finish the step
+                        double compositeTravelledDistance = _double_currentSpeed*t1 + 0.5*ParametersSingleton.MaxAcceleration*t1*t1 + _double_desiredSpeed*t2; // travelled distance using current speed and desired speed
+                        _double_locX += compositeTravelledDistance*_double_cos_driveAngle; // relocation along x axis
+                        _double_locY += compositeTravelledDistance * _double_sin_driveAngle; // relocation along y axis
+                        _double_currentSpeed = _double_desiredSpeed; // no speed overstepping
+                    }
+                    else // no overstep
+                    {
+                        _double_locX += (travelledDistanceDueToAcceleration + travelledDistance) * _double_cos_driveAngle; // relocation along x axis
+                        _double_locY += (travelledDistanceDueToAcceleration + travelledDistance) * _double_sin_driveAngle; // relocation along y axis
+                        _double_currentSpeed = nextSpeed; // speed at the end of time step
+                    }
+                }
+                else // deacceleration
+                {
+                    double nextSpeed = _double_currentSpeed + delta; // next speed
+                    if (nextSpeed < _double_desiredSpeed) // overstep
+                    {
+                        double t1 = -speedDiff/ParametersSingleton.MaxAcceleration; // time when we would overstep (sign change is faster than abs)
+                        double t2 = dt - t1; // remaining time to finish the step
+                        double compositeTravelledDistance = _double_currentSpeed * t1 - 0.5 * ParametersSingleton.MaxAcceleration * t1 * t1 + _double_desiredSpeed * t2; // travelled distance using current speed and desired speed
+                        _double_locX += compositeTravelledDistance * _double_cos_driveAngle;// relocation along x axis
+                        _double_locY += compositeTravelledDistance * _double_sin_driveAngle;// relocation along y axis
+                        _double_currentSpeed = _double_desiredSpeed; // no speed overstepping
+                    }
+                    else
+                    {
+                        _double_locX += (travelledDistanceDueToAcceleration - travelledDistance) * _double_cos_driveAngle; // relocation along x axis
+                        _double_locY += (travelledDistanceDueToAcceleration - travelledDistance) * _double_sin_driveAngle; // relocation along y axis
+                        _double_currentSpeed = nextSpeed; // speed at the end of time step
+                    }
+                }
+            }
+
+            CollisionWithWall();
+        }
+
+        private void CollisionWithWall()
+        {
+            bool hit = false;
+            if (_double_locX < 0)
+            {
+                hit = true;
+                if (System.Math.Abs(_double_cos_driveAngle) >= Tolerance)
+                    _double_locY -= _double_locX * _double_sin_driveAngle / _double_cos_driveAngle;
+                _double_locX = 0;
+            }
+            else if (_double_locX > ParametersSingleton.ArenaSize)
+            {
+                hit = true;
+                if (System.Math.Abs(_double_cos_driveAngle) >= Tolerance)
+                    _double_locY += (ParametersSingleton.ArenaSize - _double_locX) * _double_sin_driveAngle / _double_cos_driveAngle;
+                _double_locX = ParametersSingleton.ArenaSize;
+            }
+            if (_double_locY < 0)
+            {
+                hit = true;
+                if (System.Math.Abs(_double_sin_driveAngle) >= Tolerance)
+                    _double_locX -= _double_locY*_double_cos_driveAngle/_double_sin_driveAngle;
+                _double_locY = 0;
+            }
+            else if (_double_locY > ParametersSingleton.ArenaSize)
+            {
+                hit = true;
+                if (System.Math.Abs(_double_sin_driveAngle) >= Tolerance)
+                    _double_locX += (ParametersSingleton.ArenaSize-_double_locY) * _double_cos_driveAngle / _double_sin_driveAngle;
+                _double_locY = ParametersSingleton.ArenaSize;
+            }
+            if (hit)
+            {
+                _double_currentSpeed = 0;
+                _double_desiredSpeed = 0;
+                TakeDamage(ParametersSingleton.CollisionDamage);
+            }
         }
     }
 }

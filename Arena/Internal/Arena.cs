@@ -275,8 +275,7 @@ namespace Arena.Internal
                     degrees = Common.Math.ToDegrees(System.Math.Atan2(otherRobot.LocY - robot.LocY, otherRobot.LocX - robot.LocX));
                 }
             }
-            if (degrees < 0)
-                degrees += 360;
+            degrees = Common.Math.FixDegrees(degrees);
         }
 
         public int Cannon(Robot robot, Tick launchTick, int degrees, int range)
