@@ -26,14 +26,14 @@ namespace Arena.Internal
         public const int ArenaSize = 1000;
         public const double CollisionDistance = 1;
         public const int CollisionDamage = 2;
-        public const int ExplosionDisplayDelay = 500;
         // Missile
         public const int MissileSpeed = 300; // in m/s
+        public const int ExplosionDisplayDelay = 500;
         // Robot
-        public const bool EnableCheat = false;
+        public const bool EnableCheat = true;
         public const double TrigonometricBias = 100000;
         public const int MaxSpeed = 30; // in m/s
-        public const int MaxDamage = 100000;
+        public const int MaxDamage = 100;
         public const int MaxResolution = 20; // in degrees
         public const int MaxCannonRange = 700; // in meters
         public const int MaxAcceleration = 5; // acceleration factor in m/s

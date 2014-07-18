@@ -21,15 +21,20 @@ namespace Robots
             // Simple mode: go to target if far and random if in range
             Simple,
             // Shark mode: go to predefined destination and then circle
+            Shark,
+        };
+
+        private enum SharkModes
+        {
             GoToDestination, // -> DecreaseSpeed
             DecreaseSpeed, // -> Circling
             Circling, // -> GoToDestination
-        };
+        }
 
         // Robot parameters
         private const double Pi = 3.14159;
         private const bool UpgradedPrecision = true;
-        private const bool UseInterpolation = false;
+        private const bool UseInterpolation = true;
         private const double FriendRange = 20;
         private const double TrackStepTime = 0.25;
 
@@ -47,6 +52,7 @@ namespace Robots
         private int _fireEnemyAngle;
         private int _fireEnemyRange;
         private MoveModes _moveMode;
+        private SharkModes _sharkMode;
         private double _driveAngle;
         
         // Simple move
@@ -125,18 +131,30 @@ namespace Robots
                 FireOnEnemy(_maxExplosionRange, _maxExplosionRangePlusCannonRange);
             SaveCurrentState();
 
-            // Shark/Corner mode
-            if (_teamCount == 1)
+            _moveMode = MoveModes.Still;
+
+            //_moveMode = MoveModes.Shark; _sharkMode = SharkModes.GoToDestination;
+
+            // Shark
+            if (_moveMode == MoveModes.Shark)
             {
-                _destinationX = Clamp(_currentLocX, 100, _arenaSize - 100);
-                _destinationY = Clamp(_currentLocY, 100, _arenaSize - 100);
+                if (_teamCount == 1)
+                {
+                    _destinationX = Clamp(_currentLocX, 100, _arenaSize - 100);
+                    _destinationY = Clamp(_currentLocY, 100, _arenaSize - 100);
+                }
+                else
+                {
+                    _destinationX = _currentLocX < 500 ? 100 : 900;
+                    _destinationY = _currentLocY < 500 ? 100 : 900;
+                }
             }
-            else
+            // Corner mode
+            else if (_moveMode == MoveModes.Corner)
             {
-                _destinationX = _currentLocX < 500 ? 100 : 900;
-                _destinationY = _currentLocY < 500 ? 100 : 900;
+                _destinationX = 100;
+                _destinationY = 100;
             }
-            _moveMode = MoveModes.Corner;
 
             Move();
         }
@@ -250,8 +268,8 @@ namespace Robots
                     ComputePoint(_currentLocX, _currentLocY, preciseRange, preciseAngle, out enemyX, out enemyY);
                     if (!IsFriendlyTarget(enemyX, enemyY))
                     {
-                        //double cheatAngle, cheatRange, cheatX, cheatY;
-                        //Cheat.CHEAT_FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
+                        double cheatAngle, cheatRange, cheatX, cheatY;
+                        Cheat.FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
 
                         // Save enemy position/angle/range
                         _currentEnemyAngle = preciseAngle;
@@ -262,7 +280,7 @@ namespace Robots
                         // Save enemy to shared
                         UpdateSharedEnemyLocation(_currentEnemyX, _currentEnemyY);
 
-                        //SDK.LogLine("FIND CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
+                        SDK.LogLine("FIND CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
                         SDK.LogLine("FIND ENEMY A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
 
                         bestRange = preciseRange;
@@ -311,8 +329,8 @@ namespace Robots
                 double rawEnemyX, rawEnemyY;
                 ComputePoint(_currentLocX, _currentLocY, r, a, out rawEnemyX, out rawEnemyY);
 
-                //double cheatAngle, cheatRange, cheatX, cheatY;
-                //Cheat.CHEAT_FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
+                double cheatAngle, cheatRange, cheatX, cheatY;
+                Cheat.FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
 
                 // Save enemy position/angle/range
                 _currentEnemyAngle = preciseAngle;
@@ -323,7 +341,7 @@ namespace Robots
                 // Save enemy to shared
                 UpdateSharedEnemyLocation(_currentEnemyX, _currentEnemyY);
 
-                //SDK.LogLine("TRACK CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
+                SDK.LogLine("TRACK CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
                 SDK.LogLine("TRACK ENEMY A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
                 SDK.LogLine("  RAW ENEMY A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", a, r, rawEnemyX, rawEnemyY);
 
@@ -449,14 +467,8 @@ namespace Robots
                 case MoveModes.Simple:
                     SimpleMove();
                     break;
-                case MoveModes.GoToDestination:
-                    GoToDestination();
-                    break;
-                case MoveModes.DecreaseSpeed:
-                    DecreaseSpeed();
-                    break;
-                case MoveModes.Circling:
-                    Circling();
+                case MoveModes.Shark:
+                    SharkMove();
                     break;
             }
         }
@@ -538,26 +550,68 @@ namespace Robots
 
         private void CornerMove()
         {
+            //SDK.Drive(0, SDK.Rand(2) == 0 ? 100 : 50);
             double distanceToDestination = Distance(_currentLocX, _currentLocY, _destinationX, _destinationY);
-            if (distanceToDestination < 75)
+            if (distanceToDestination < 100 && SDK.Speed > 50)
+            {
+                _driveAngle = Angle(_currentLocX, _currentLocY, _destinationX, _destinationY);
+                Drive(_driveAngle, 50);
+                //SDK.LogLine("Set speed to 50 {0:0.0000}", _driveAngle);
+            }
+            else if (distanceToDestination < 75)
             {
                 // Change corner
-                if (_currentLocX < 200 && _currentLocY < 200) // top left, go to top right
+                if (_currentLocX <= 100 && _currentLocY <= 100) // top left, go to top right
+                {
                     _destinationX = _arenaSize - 100;
-                else if (_currentLocX > _arenaSize - 200 && _currentLocY < 200) // top right, go to bottom right
+                    //SDK.LogLine("Changing corner: from top left to top right");
+                }
+                else if (_currentLocX >= _arenaSize - 100 && _currentLocY <= 100) // top right, go to bottom right
+                {
                     _destinationY = _arenaSize - 100;
-                else if (_currentLocX > _arenaSize - 200 && _currentLocY > _arenaSize - 200) // bottom right, go to bottom left
+                    //SDK.LogLine("Changing corner: from top right to bottom right");
+                }
+                else if (_currentLocX >= _arenaSize - 100 && _currentLocY >= _arenaSize - 100)  // bottom right, go to bottom left
+                {
                     _destinationX = 100;
-                else if (_currentLocX < 200 && _currentLocY > _arenaSize - 200) // bottom left, go to top left
+                    //SDK.LogLine("Changing corner: from bottom right to bottom left");
+                }
+                else if (_currentLocX <= 100 && _currentLocY >= _arenaSize - 100) // bottom left, go to top left
+                {
                     _destinationY = 100;
+                    //SDK.LogLine("Changing corner: from bottom left to top left");
+                }
+                _driveAngle = Angle(_currentLocX, _currentLocY, _destinationX, _destinationY);
+                Drive(_driveAngle, 100);
+                //SDK.LogLine("Set speed to 100 (1) {0:0.0000}", _driveAngle);
             }
-            _driveAngle = Angle(_currentLocX, _currentLocY, _destinationX, _destinationY);
-            Drive(_driveAngle, 50);
+            else
+            {
+                _driveAngle = Angle(_currentLocX, _currentLocY, _destinationX, _destinationY);
+                Drive(_driveAngle, 100);
+                //SDK.LogLine("Set speed to 100 (2) {0:0.0000}", _driveAngle);
+            }
         }
 
         #endregion
 
         #region Shark
+
+        private void SharkMove()
+        {
+            switch (_sharkMode)
+            {
+                case SharkModes.GoToDestination:
+                    GoToDestination();
+                    break;
+                case SharkModes.DecreaseSpeed:
+                    DecreaseSpeed();
+                    break;
+                case SharkModes.Circling:
+                    Circling();
+                    break;
+            }
+        }
 
         private void GoToDestination()
         {
@@ -568,7 +622,7 @@ namespace Robots
                 //SDK.LogLine("Far from destination {0},{1} go to this destination at full speed {2:0.00} {3}", _destinationX, _destinationY, _driveAngle, SDK.Speed);
             }
             else
-                _moveMode = MoveModes.DecreaseSpeed;
+                _sharkMode = SharkModes.DecreaseSpeed;
         }
 
         private void DecreaseSpeed()
@@ -579,7 +633,7 @@ namespace Robots
                 //SDK.LogLine("Destination reached, slowing down {0:0.00} {1}", _driveAngle, SDK.Speed);
             }
             else
-                _moveMode = MoveModes.Circling;
+                _sharkMode = SharkModes.Circling;
         }
 
         private void Circling()
@@ -657,7 +711,7 @@ namespace Robots
                 }
             }
             else
-                _moveMode = MoveModes.GoToDestination;
+                _sharkMode = SharkModes.GoToDestination;
         }
 
         public bool FarFromDestination()
@@ -1029,7 +1083,7 @@ namespace Robots
                        if (!IsFriendlyTarget(enemyX, enemyY))
                        {
                            //double cheatAngle, cheatRange, cheatX, cheatY;
-                           //Cheat.CHEAT_FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
+                           //Cheat.FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
 
                            _currentEnemyAngle = preciseAngle;
                            _currentEnemyRange = preciseRange;
@@ -1741,7 +1795,7 @@ namespace Robots
                     if (!IsFriendlyTarget(enemyX, enemyY))
                     {
                         //double cheatAngle, cheatRange, cheatX, cheatY;
-                        //Cheat.CHEAT_FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
+                        //Cheat.FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
 
                         _currentEnemyAngle = preciseAngle;
                         _currentEnemyRange = preciseRange;

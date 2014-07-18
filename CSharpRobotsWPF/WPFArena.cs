@@ -28,10 +28,9 @@ namespace CSharpRobotsWPF
         private static readonly Brush Explosion40Brush = new SolidColorBrush(Colors.Yellow);
 
         private readonly MainWindow _mainWindow;
+        private readonly Grid _backgroundGrid;
 
         private readonly IReadonlyArena _arena;
-
-        private Grid _backgroundGrid;
 
         private ObservableCollection<WPFRobot> _wpfRobots;
         private ObservableCollection<WPFRobot> _wpfDeadRobots;
@@ -41,7 +40,8 @@ namespace CSharpRobotsWPF
         {
             _mainWindow = mainWindow;
 
-            _arena = Factory.CreateArena();
+            //_arena = Factory.CreateArena();
+            _arena = Factory.CreatePreciseArena();
             _arena.ArenaStarted += OnArenaStarted;
             _arena.ArenaStopped += OnArenaStopped;
             _arena.ArenaStep += OnArenaStep;
@@ -60,12 +60,13 @@ namespace CSharpRobotsWPF
             //StartStopInternal(arena => arena.InitializeDoubleMatch(typeof(Robots.SinaC), typeof(Robots.Rabbit)));
             //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Stinger), 500, 500, 50, 150));
             //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Rabbit), 500, 500, 50, 150));
-            StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Target), 10, 10, 500, 500));
+            StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Target), 10, 10, 400, 500));
+            //StartStopInternal(arena => arena.InitializeSolo(typeof(Robots.SinaC), 500, 500, 0, 100));
         }
 
         public void StartSolo(Type type)
         {
-            StartStopInternal(arena => arena.InitializeSolo(type, 500, 500, 50, 150));
+            StartStopInternal(arena => arena.InitializeSolo(type, 500, 500, 0, 0));
         }
 
         public void StartSingle(Type robot1, Type robot2)

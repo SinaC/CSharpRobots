@@ -6,5 +6,10 @@
         {
             return new Internal.Arena();
         }
+
+        public static IReadonlyArena CreatePreciseArena()
+        {
+            return new Internal.PreciseArena();
+        }
     }
 }
