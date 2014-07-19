@@ -8,32 +8,8 @@ using Common;
 
 namespace Arena.Internal
 {
-    /*
-        Arena: 
-            The battlefield is a square with a side of 1 Km (1000 meters). When a robot hits the walls of this square, it earns 2 damage points out of a total amount of 100 and the engine stops. It's not the worst thing, but it's not a good one, so avoid the walls of the battlefield. When a robot reaches 100 damage points, it's disabled and loses the game.µ
-        Matches:
-            There are three types of play:
-            Single Match: Two robots fight one against the other.
-            Double Match: Two couples of robots fight one against the other. This type of play is more difficult than the previous because it's not simple to distinguish the friend from the enemies.
-            Team Match: Four team of eight robots each fight one against all the others.
-            All matches last for 180 seconds. The robot or the team that disables all the other robots in the battlefield wins.
-        Engine
-            Robots have an engine and they can run everywhere in the battlefield. The maximum speed of the robots is 30 m/s (meters per second), i.e. 100 Km/h, and the acceleration is 5 m/s2. This means that a robot needs six seconds to reach the maximum speed.
-            When the engine has 0% power, the robot stops with a deceleration of 5 m/s2, while a 100% power gives the maximum speed.
-            When a robot hits the walls, the engine reaches 0% power and speed suddenly falls to 0 m/s.
-        Cannon
-            Robots have a cannon. This cannon fires missiles. The robot can point the cannon all around and can fire all the missiles it wants, but there is a reload time of 1 second.
-        Missiles
-            Missiles have a range of 700 meters and a speed of 300 m/s, so they need 2 seconds and a third to reach the maximum range. The speed of the missile is independent from the speed of the robot, so it's always 300 m/s. When a missile explodes, it gives damage points to all the robots nearby (remember that 100 damage points disable a robot). Damage points depend on the distance of the robot from the explosion. This is the correspondence
-            5 meters 10 damage points
-            20 meters 5 damage points
-            40 meters 3 damage points
-            If a robot fires a missile within a circle of 5 meters radius, it gives itself 10 damage points, so it's better to fire the missiles far away.
-        Scanner
-            Robots use a scanner to find other robots. It scans the battlefield with a resolution from 1 to 20 degrees. Scanning the battlefield, the robot receives the distance of the nearest robot (both friend or enemy) or zero if there is no one in that sector.
-     */
 
-    internal class Arena : IReadonlyArena
+    internal class DoublePrecisionArena : IReadonlyArena
     {
         private struct DamageByRange
         {
@@ -41,7 +17,7 @@ namespace Arena.Internal
             public int Damage;
         }
 
-        private readonly DamageByRange[] _damageByRanges = new[]
+        private readonly DamageByRange[] _damageByRanges = 
             {
                 // Must be sorted on Range
                 new DamageByRange // Direct
@@ -65,30 +41,30 @@ namespace Arena.Internal
         private CountdownEvent _robotSyncCountdownEvent; // used to synchronize arena and robots
         private Task _mainTask;
 
-        private readonly List<Robot> _robots;
-        private readonly List<Missile> _missiles;
+        private readonly List<DoublePrecisionRobot> _robots;
+        private readonly List<DoublePrecisionMissile> _missiles;
         private int _missileId;
 
         private Tick _lastStepTick;
         private int _stepCount;
         private readonly RandomUnique _randomUnique;
-        
+
         public Random Random { get; private set; }
 
-        internal Arena()
+        internal DoublePrecisionArena()
         {
             // Initialize Random
             _randomUnique = new RandomUnique(0, ParametersSingleton.ArenaSize);
             Random = new Random();
 
             //
-            _robots = new List<Robot>();
-            _missiles = new List<Missile>();
-            
+            _robots = new List<DoublePrecisionRobot>();
+            _missiles = new List<DoublePrecisionMissile>();
+
             // Force thread pool to use 32+1 work threads (32 robots max + 1 for arena)
             int workerThreads, complete;
             ThreadPool.GetMinThreads(out workerThreads, out complete);
-            ThreadPool.SetMinThreads(32+1, complete);
+            ThreadPool.SetMinThreads(32 + 1, complete);
 
             //
             State = ArenaStates.Created;
@@ -129,7 +105,7 @@ namespace Arena.Internal
                     copy = _robots.Select(x => x as IReadonlyRobot).ToList();
                 }
                 return copy;
-            } 
+            }
         }
 
         public List<IReadonlyMissile> Missiles
@@ -148,48 +124,8 @@ namespace Arena.Internal
 
         public void InitializeSolo(Type robotType, int locX, int locY, int heading, int speed)
         {
-            //try
-            //{
-            //    Mode = ArenaModes.Solo;
-
-            //    _missiles.Clear();
-            //    _robots.Clear();
-            //    WinningTeam = -1;
-            //    _stepCount = 0;
-            //    _missileId = 0;
-
-            //    Type robotSDKType = typeof (SDK.Robot);
-            //    if (!robotType.IsSubclassOf(robotSDKType))
-            //    {
-            //        Log.WriteLine(Log.LogLevels.Error, "Type {0} must be a subclass of {1}", robotType, robotSDKType);
-            //        State = ArenaStates.Error;
-            //    }
-            //    else
-            //    {
-            //        // Create test robot
-            //        SDK.Robot userRobot = Activator.CreateInstance(robotType) as SDK.Robot;
-            //        Robot robot = new Robot();
-            //        robot.Initialize(userRobot, this, robotSDKType.Name, 0, 0, locX, locY, heading, speed);
-            //        _robots.Add(robot);
-
-            //        Log.WriteLine(Log.LogLevels.Info, "Test Robot Type {0} created at location {1},{2}", robotType, robot.LocX, robot.LocY);
-
-            //        State = ArenaStates.Initialized;
-            //    }
-            //}
-            //catch (Exception ex)
-            //{
-            //    // TODO: manage exception
-            //    Log.WriteLine(Log.LogLevels.Error, "Exception while start solo mode. {0}", ex);
-
-            //    // Force robots to stop
-            //    foreach (Robot robot in _robots)
-            //        robot.Stop();
-
-            //    State = ArenaStates.Error;
-            //}
             Mode = ArenaModes.Solo;
-            InitializeMatch(1, _ => new { X = locX, Y = locY}, robotType);
+            InitializeMatch(1, _ => new { X = locX, Y = locY }, robotType);
         }
 
         public void InitializeSingleMatch(Type team1, Type team2)
@@ -201,7 +137,7 @@ namespace Arena.Internal
         public void InitializeSingleMatch(Type team1, Type team2, int locX1, int locY1, int locX2, int locY2)
         {
             Mode = ArenaModes.Single;
-            InitializeMatch(1, idx => new { X = idx == 0 ? locX1 : locX2, Y = idx == 0 ? locY1 : locY2}, team1, team2);
+            InitializeMatch(1, idx => new { X = idx == 0 ? locX1 : locX2, Y = idx == 0 ? locY1 : locY2 }, team1, team2);
         }
 
         public void InitializeSingle4Match(Type team1, Type team2, Type team3, Type team4)
@@ -227,7 +163,7 @@ namespace Arena.Internal
             Mode = ArenaModes.Team;
             InitializeMatch(8, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2, team3, team4);
         }
-        
+
         public void StartMatch()
         {
             if (State == ArenaStates.Initialized)
@@ -254,7 +190,7 @@ namespace Arena.Internal
 
         #endregion
 
-        public void CHEAT_FindNearestEnemy(Robot robot, out double degrees, out double range, out double x, out double y)
+        public void CHEAT_FindNearestEnemy(DoublePrecisionRobot robot, out double degrees, out double range, out double x, out double y)
         {
             degrees = 0;
             range = 0;
@@ -262,7 +198,7 @@ namespace Arena.Internal
             y = 0;
 
             double nearest = Double.MaxValue;
-            foreach (Robot otherRobot in _robots.Where(r => r.Team != robot.Team))
+            foreach (DoublePrecisionRobot otherRobot in _robots.Where(r => r.Team != robot.Team))
             {
                 double distance = Common.Math.Distance(robot.LocX, robot.LocY, otherRobot.LocX, otherRobot.LocY);
                 if (distance < nearest)
@@ -277,40 +213,40 @@ namespace Arena.Internal
             degrees = Common.Math.FixDegrees(degrees);
         }
 
-        public void CHEAT_FireAt(Robot robot, double targetX, double targetY)
+        public void CHEAT_FireAt(DoublePrecisionRobot robot, double targetX, double targetY)
         {
-            int heading = (int)System.Math.Round(Common.Math.ToDegrees(Common.Math.ComputeAngle(robot.LocX, robot.LocY, targetX, targetY)));
-            int range = (int)System.Math.Round(Common.Math.Distance(robot.LocX, robot.LocY, targetX, targetY));
+            double heading = Common.Math.ToDegrees(Common.Math.ComputeAngle(robot.LocX, robot.LocY, targetX, targetY));
+            double range = Common.Math.Distance(robot.LocX, robot.LocY, targetX, targetY);
             lock (_missiles)
             {
-                Missile missile = new Missile(robot, MatchStart, _missileId, robot.LocX, robot.LocY, heading, range);
+                DoublePrecisionMissile missile = new DoublePrecisionMissile(robot, MatchStart, _missileId, robot.LocX, robot.LocY, heading, range);
                 _missiles.Add(missile);
                 _missileId++;
             }
         }
 
-        public int Cannon(Robot robot, Tick launchTick, int degrees, int range)
+        public int Cannon(DoublePrecisionRobot robot, Tick launchTick, int degrees, int range)
         {
             //Log.WriteLine(Log.LogLevels.Debug, "Launching missile from Robot {0}[{1}] to {2} {3}", robot.TeamName, robot.Id, degrees, range);
             lock (_missiles)
             {
-                Missile missile = new Missile(robot, MatchStart, _missileId, robot.LocX, robot.LocY, degrees, range);
+                DoublePrecisionMissile missile = new DoublePrecisionMissile(robot, MatchStart, _missileId, robot.LocX, robot.LocY, degrees, range);
                 _missiles.Add(missile);
                 _missileId++;
             }
             return 1;
         }
 
-        public void Drive(Robot robot, int degrees, int speed)
+        public void Drive(DoublePrecisionRobot robot, int degrees, int speed)
         {
             // NOP: managed in InternalRobot
         }
 
-        public int Scan(Robot robot, int degrees, int resolution)
+        public int Scan(DoublePrecisionRobot robot, int degrees, int resolution)
         {
             double nearest = Double.MaxValue;
-            Robot target = null;
-            foreach (Robot r in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
+            DoublePrecisionRobot target = null;
+            foreach (DoublePrecisionRobot r in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
             {
                 // Sector method
                 bool isInSector = Common.Math.IsInSector(robot.LocX, robot.LocY, degrees, resolution, r.LocX, r.LocY);
@@ -330,15 +266,15 @@ namespace Arena.Internal
             //    Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] failed to find someone else", robot.TeamName, robot.Id);
 
             double nearest2 = Double.MaxValue;
-            Robot target2 = null;
-            foreach (Robot r in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
+            DoublePrecisionRobot target2 = null;
+            foreach (DoublePrecisionRobot r in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
             {
                 // Angle method
                 double angleRadians = Common.Math.ComputeAngle(robot.LocX, robot.LocY, r.LocX, r.LocY);
                 double angleDegrees = Common.Math.ToDegrees(angleRadians);
                 double fixedAngle = Common.Math.FixDegrees(angleDegrees);
                 double diff = System.Math.Abs(fixedAngle - degrees);
-                if (diff <= resolution/2.0)
+                if (diff <= resolution / 2.0)
                 {
                     double distance = Common.Math.Distance(robot.LocX, robot.LocY, r.LocX, r.LocY);
                     if (distance < nearest2)
@@ -352,13 +288,13 @@ namespace Arena.Internal
             //Debug.Assert(target == target2 && System.Math.Abs(nearest-nearest2) < 0.0001);
             if (target != target2 || System.Math.Abs(nearest - nearest2) > 0.0001)
             {
-                Log.WriteLine(Log.LogLevels.Error, "Different result for sector and angle method: {0:0.0000}|{1:0.0000}   param angle: {2} res: {3}", nearest, nearest2, degrees, resolution);
+                Log.WriteLine(Log.LogLevels.Warning, "Different result for sector and angle method: {0:0.0000}|{1:0.0000}   param angle: {2} res: {3}", nearest, nearest2, degrees, resolution);
             }
 
             return target != null ? (int)System.Math.Round(nearest) : 0;
         }
 
-        public int TeamCount(Robot robot)
+        public int TeamCount(DoublePrecisionRobot robot)
         {
             return _robots.Count(x => x.Team == robot.Team);
         }
@@ -375,9 +311,9 @@ namespace Arena.Internal
                 _missileId = 0;
 
                 //
-                Type robotType = typeof (SDK.Robot);
+                Type robotType = typeof(SDK.Robot);
                 // Check if every team type robot inherits from SDK.Robot
-                foreach(Type type in teamType)
+                foreach (Type type in teamType)
                 {
                     if (!type.IsSubclassOf(robotType))
                     {
@@ -397,7 +333,7 @@ namespace Arena.Internal
                             int x = getCoordinatesFunc(t).X;
                             int y = getCoordinatesFunc(t).Y;
                             SDK.Robot userRobot = Activator.CreateInstance(teamType[t]) as SDK.Robot;
-                            Robot robot = new Robot();
+                            DoublePrecisionRobot robot = new DoublePrecisionRobot();
                             robot.Initialize(userRobot, this, teamType[t].Name, i, t, x, y);
                             _robots.Add(robot);
 
@@ -414,7 +350,7 @@ namespace Arena.Internal
                 Log.WriteLine(Log.LogLevels.Error, "Exception while start arena. {0}", ex);
 
                 // Force robots to stop
-                foreach(Robot robot in _robots)
+                foreach (DoublePrecisionRobot robot in _robots)
                     robot.Stop();
 
                 State = ArenaStates.Error;
@@ -427,7 +363,7 @@ namespace Arena.Internal
             // Stop main loop
             _cancellationTokenSource.Cancel();
             // Stop robots
-            foreach (Robot robot in _robots)
+            foreach (DoublePrecisionRobot robot in _robots)
                 robot.Stop(); // TODO: asynchronous stop
             //
             _mainTask.Wait(1000);
@@ -438,7 +374,7 @@ namespace Arena.Internal
             Log.WriteLine(Log.LogLevels.Info, "Starting robots");
 
             // Start robots
-            foreach (Robot robot in _robots)
+            foreach (DoublePrecisionRobot robot in _robots)
                 robot.Start(MatchStart, _robotSyncCountdownEvent);
 
             Log.WriteLine(Log.LogLevels.Debug, "Robots started, waiting on CountdownEvent");
@@ -458,7 +394,7 @@ namespace Arena.Internal
 
             // Start main loop
             Stopwatch sw = new Stopwatch();
-            while(true)
+            while (true)
             {
                 //
                 sw.Reset();
@@ -498,108 +434,31 @@ namespace Arena.Internal
                 else
                 {
                     // Get real step time
-                    double realStepTime = _lastStepTick == null ? ParametersSingleton.StepDelay : Tick.TotalMilliseconds(now, _lastStepTick);
+                    double realStepTime = _lastStepTick == null ? ParametersSingleton.StepDelay : Tick.TotalSeconds(now, _lastStepTick);
                     _lastStepTick = now;
 
                     //Log.WriteLine(Log.LogLevels.Debug, "STEP: {0} {1:0.0000}  {2:0.00}", _stepCount, elapsed, realStepTime);
                     _stepCount++;
 
-                    // Update robots
-                    foreach (Robot robot in _robots.Where(x => x.State == RobotStates.Running))
-                    {
-                        // Update speed, moderated by acceleration
-                        robot.UpdateSpeed(realStepTime);
-                        // Update heading; allow change below a certain speed
-                        robot.UpdateHeading();
-                        // Update distance traveled on this heading, x and y
-                        robot.UpdateLocation(realStepTime);
-                        // Check collisions
-                        if (robot.Speed > 0)
-                        {
-                            // With other robots
-                            Robot robot1 = robot;
-                            foreach (Robot other in _robots.Where(x => x != robot1 && x.State == RobotStates.Running))
-                            {
-                                double diffX = System.Math.Abs(robot.LocX - other.LocX);
-                                double diffY = System.Math.Abs(robot.LocY - other.LocY);
-                                if (diffX < ParametersSingleton.CollisionDistance && diffY < ParametersSingleton.CollisionDistance) // Collision
-                                {
-                                    Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides Robot {2}[{3}]", robot.TeamName, robot.Id, other.TeamName, other.Id);
-                                    // Damage moving robot and stop it
-                                    robot.Collision(ParametersSingleton.CollisionDamage);
-                                    // Damage colliding robot
-                                    other.Collision(ParametersSingleton.CollisionDamage);
-                                }
-                            }
-                            // With walls
-                            if (robot.LocX < 0)
-                            {
-                                Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides left wall", robot.TeamName, robot.Id);
-                                robot.CollisionWall(ParametersSingleton.CollisionDamage, 0, robot.LocY);
-                            }
-                            else if (robot.LocX >= ParametersSingleton.ArenaSize)
-                            {
-                                Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides right wall", robot.TeamName, robot.Id);
-                                robot.CollisionWall(ParametersSingleton.CollisionDamage, ParametersSingleton.ArenaSize - 1, robot.LocY);
-                            }
-                            if (robot.LocY < 0)
-                            {
-                                Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides top wall", robot.TeamName, robot.Id);
-                                robot.CollisionWall(ParametersSingleton.CollisionDamage, robot.LocX, 0);
-                            }
-                            else if (robot.LocY >= ParametersSingleton.ArenaSize)
-                            {
-                                Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] collides bottom wall", robot.TeamName, robot.Id);
-                                robot.CollisionWall(ParametersSingleton.CollisionDamage, robot.LocX, ParametersSingleton.ArenaSize - 1);
-                            }
-                        }
-                    }
-
-                    // Update missiles
+                    // Update missile position and manage explosion
                     lock (_missiles)
                     {
-                        foreach (Missile missile in _missiles)
+                        foreach (DoublePrecisionMissile missile in _missiles)
                         {
                             if (missile.State == MissileStates.Flying)
                             {
-                                missile.UpdatePosition(realStepTime);
-
-                                // Check for missile hitting walls
-                                if (missile.LocX < 0)
-                                {
-                                    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides left wall", missile.Robot.TeamName, missile.Robot.Id);
-                                    missile.CollisionWall(0, missile.LocY);
-                                }
-                                if (missile.LocX >= ParametersSingleton.ArenaSize)
-                                {
-                                    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides right wall", missile.Robot.TeamName, missile.Robot.Id);
-                                    missile.CollisionWall(ParametersSingleton.ArenaSize - 1, missile.LocY);
-                                }
-                                if (missile.LocY < 0)
-                                {
-                                    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides top wall", missile.Robot.TeamName, missile.Robot.Id);
-                                    missile.CollisionWall(missile.LocX, 0);
-                                }
-                                if (missile.LocY >= ParametersSingleton.ArenaSize)
-                                {
-                                    Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] collides bottom wall", missile.Robot.TeamName, missile.Robot.Id);
-                                    missile.CollisionWall(missile.LocX, ParametersSingleton.ArenaSize - 1);
-                                }
-
-                                // Check for missile reaching target range
-                                if (missile.CurrentDistance >= missile.Range)
-                                {
-                                    //Log.WriteLine(Log.LogLevels.Debug, "Missile from Robot {0}[{1}] reached its target", missile.Robot.TeamName, missile.Robot.Id);
-                                    missile.TargetReached();
-                                }
+                                missile.Update(realStepTime);
 
                                 // if missile has exploded, inflict damage on all nearby robots, according to hit range
                                 if (missile.State == MissileStates.Exploding)
                                 {
-                                    Robot missileRobot = missile.Robot as Robot;
-                                    foreach (Robot robot in _robots.Where(x => x.State == RobotStates.Running))
+                                    DoublePrecisionRobot missileRobot = missile.Robot as DoublePrecisionRobot;
+                                    foreach (DoublePrecisionRobot robot in _robots.Where(x => x.State == RobotStates.Running))
                                     {
-                                        double distance = Common.Math.Distance(robot.LocX, robot.LocY, missile.LocX, missile.LocY);
+                                        // Explosion use robot location at explosion time
+                                        double realLocX, realLocY, realSpeed;
+                                        robot.ComputeCurrentLocation(missile.ExplodingTime, out realLocX, out realLocY, out realSpeed);
+                                        double distance = Common.Math.Distance(realLocX, realLocY, missile.LocX, missile.LocY);
                                         foreach (DamageByRange damageByRange in _damageByRanges)
                                             if (distance < damageByRange.Range)
                                             {
@@ -620,17 +479,22 @@ namespace Arena.Internal
                                             }
                                     }
 
-                                    missile.UpdateExploding();
+                                    missile.ExplosionHandled();
                                 }
                             }
                             else if (missile.State == MissileStates.Exploded)
-                                missile.UpdateExploded(ParametersSingleton.ExplosionDisplayDelay);
+                                missile.UpdateExploded();
                         }
                         // Remove deleted missile
                         _missiles.RemoveAll(x => x.State == MissileStates.Deleted);
                     }
 
-                    if (_robots.All(x => x.State != RobotStates.Created && x.State != RobotStates.Initialized && x.State != RobotStates.Starting)) // check only if robot has started
+                    // Update robots
+                    foreach (DoublePrecisionRobot robot in _robots.Where(x => x.State == RobotStates.Running))
+                        robot.Update(realStepTime);
+
+                    // Check winner/draw
+                    if (_robots.All(x => x.State != RobotStates.Created && x.State != RobotStates.Initialized && x.State != RobotStates.Starting)) // Check only if robot has started
                     {
                         // Check if there is a winning team
                         List<int> teamsWithRobotRunning = _robots.Where(x => x.State == RobotStates.Running).GroupBy(x => x.Team).Select(g => g.Key).ToList();

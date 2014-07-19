@@ -20,5 +20,9 @@
         // Current location
         int LocX { get; }
         int LocY { get; }
+
+        // Theorical explosion location
+        double ExplosionX { get; }
+        double ExplosionY { get; }
     }
 }

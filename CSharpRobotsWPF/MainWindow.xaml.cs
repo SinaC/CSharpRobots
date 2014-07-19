@@ -4,8 +4,6 @@ using System.Configuration;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using Common;
-using Microsoft.Win32;
 
 namespace CSharpRobotsWPF
 {

@@ -3,7 +3,7 @@ using SDK;
 
 namespace Robots
 {
-    // TODO: fix linear interpolation: when I move and target doesn't move estimated enemy speed is wrong
+    // TODO: eenmy speed estimation is not as accurate as it could
 
     // Behaviour:
     //  Track previous enemy, if not found, search a new enemy (don't consider teammate as enemy)
@@ -131,7 +131,7 @@ namespace Robots
                 FireOnEnemy(_maxExplosionRange, _maxExplosionRangePlusCannonRange);
             SaveCurrentState();
 
-            _moveMode = MoveModes.Still;
+            _moveMode = MoveModes.Shark;
 
             //_moveMode = MoveModes.Shark; _sharkMode = SharkModes.GoToDestination;
 
@@ -422,6 +422,7 @@ namespace Robots
             if (_fireEnemyRange > minDistance && _fireEnemyRange < maxDistance) // Don't fire if too far or if too near
             {
                 bool fired = SDK.Cannon(_fireEnemyAngle, _fireEnemyRange) != 0;
+                //Cheat.FireAt(400, 500); bool fired = true;
                 if (fired)
                 {
                     SDK.LogLine("Fired on enemy count: {0}", _fireCount);

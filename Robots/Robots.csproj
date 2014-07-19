@@ -33,7 +33,9 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Berserk.cs" />
     <Compile Include="Broken\Counter.cs" />
+    <Compile Include="Ciaky.cs" />
     <Compile Include="CrazyCannon.cs" />
     <Compile Include="HHRobot.cs" />
     <Compile Include="Broken\Phalanx.cs" />

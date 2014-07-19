@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Arena;
@@ -41,7 +39,7 @@ namespace CSharpRobotsWPF
             _mainWindow = mainWindow;
 
             //_arena = Factory.CreateArena();
-            _arena = Factory.CreatePreciseArena();
+            _arena = Factory.CreateDoublePrecisionArena();
             _arena.ArenaStarted += OnArenaStarted;
             _arena.ArenaStopped += OnArenaStopped;
             _arena.ArenaStep += OnArenaStep;
@@ -61,7 +59,7 @@ namespace CSharpRobotsWPF
             //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Stinger), 500, 500, 50, 150));
             //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Rabbit), 500, 500, 50, 150));
             StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Target), 10, 10, 400, 500));
-            //StartStopInternal(arena => arena.InitializeSolo(typeof(Robots.SinaC), 500, 500, 0, 100));
+            //StartStopInternal(arena => arena.InitializeSolo(typeof(Robots.SinaC), 10, 10, 0, 0));
         }
 
         public void StartSolo(Type type)
@@ -290,9 +288,11 @@ namespace CSharpRobotsWPF
             _mainWindow.BattlefieldCanvas.Children.Add(wpfMissile.ExplosionUIElement);
             UpdateMissile(wpfMissile, missile);
             // Set target
-            double destX, destY;
-            Common.Math.ComputePoint(missile.LaunchLocX, missile.LaunchLocY, missile.Range, missile.Heading, out destX, out destY);
-            UpdateUIPosition(wpfMissile.TargetUIElement, destX, destY);
+            double explosionX = missile.ExplosionX;
+            double explosionY = missile.ExplosionY;
+            //double explosionX, explosionY;
+            //Common.Math.ComputePoint(missile.LaunchLocX, missile.LaunchLocY, missile.Range, missile.Heading, out explosionX, out explosionY);
+            UpdateUIPosition(wpfMissile.TargetUIElement, explosionX, explosionY);
             //
             _wpfMissiles.Add(wpfMissile);
         }

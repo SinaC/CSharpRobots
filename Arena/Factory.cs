@@ -7,9 +7,9 @@
             return new Internal.Arena();
         }
 
-        public static IReadonlyArena CreatePreciseArena()
+        public static IReadonlyArena CreateDoublePrecisionArena()
         {
-            return new Internal.PreciseArena();
+            return new Internal.DoublePrecisionArena();
         }
     }
 }
