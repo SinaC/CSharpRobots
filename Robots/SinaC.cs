@@ -131,7 +131,7 @@ namespace Robots
                 FireOnEnemy(_maxExplosionRange, _maxExplosionRangePlusCannonRange);
             SaveCurrentState();
 
-            _moveMode = MoveModes.Shark;
+            _moveMode = MoveModes.Simple;
 
             //_moveMode = MoveModes.Shark; _sharkMode = SharkModes.GoToDestination;
 
