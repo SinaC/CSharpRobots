@@ -2,14 +2,14 @@
 {
     public class Factory
     {
-        public static IReadonlyArena CreateArena()
+        public static IReadonlyArena CreateCRobotArena()
         {
-            return new Internal.Arena();
+            return new Internal.CRobots.Arena();
         }
 
-        public static IReadonlyArena CreateDoublePrecisionArena()
+        public static IReadonlyArena CreateJRobotArena()
         {
-            return new Internal.DoublePrecisionArena();
+            return new Internal.JRobots.Arena();
         }
     }
 }

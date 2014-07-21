@@ -1,6 +1,6 @@
 ﻿using Common;
 
-namespace Arena.Internal
+namespace Arena.Internal.CRobots
 {
     internal class Missile : IReadonlyMissile
     {

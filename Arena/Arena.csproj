@@ -41,18 +41,18 @@
   <ItemGroup>
     <Compile Include="ArenaModes.cs" />
     <Compile Include="ArenaStates.cs" />
-    <Compile Include="Internal\Arena.cs" />
+    <Compile Include="Internal\CRobots\Arena.cs" />
     <Compile Include="Factory.cs" />
-    <Compile Include="Internal\DoublePrecisionArena.cs" />
-    <Compile Include="Internal\DoublePrecisionMissile.cs" />
-    <Compile Include="Internal\DoublePrecisionRobot.cs" />
+    <Compile Include="Internal\JRobots\Arena.cs" />
+    <Compile Include="Internal\JRobots\Missile.cs" />
+    <Compile Include="Internal\JRobots\Robot.cs" />
     <Compile Include="Internal\Parameters.cs" />
     <Compile Include="RobotStatistics.cs" />
     <Compile Include="IReadonlyMissile.cs" />
-    <Compile Include="Internal\Robot.cs" />
+    <Compile Include="Internal\CRobots\Robot.cs" />
     <Compile Include="IReadonlyArena.cs" />
     <Compile Include="IReadonlyRobot.cs" />
-    <Compile Include="Internal\Missile.cs" />
+    <Compile Include="Internal\CRobots\Missile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MissileStates.cs" />
     <Compile Include="RobotStates.cs" />

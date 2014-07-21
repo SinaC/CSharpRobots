@@ -1,8 +1,8 @@
 ﻿using Common;
 
-namespace Arena.Internal
+namespace Arena.Internal.JRobots
 {
-    internal class DoublePrecisionMissile : IReadonlyMissile
+    internal class Missile : IReadonlyMissile
     {
         private const double Tolerance = 0.00001;
 
@@ -31,7 +31,7 @@ namespace Arena.Internal
             get { return _explodingTime; }
         }
 
-        public DoublePrecisionMissile(IReadonlyRobot robot, Tick matchStart, int id, double locX, double locY, double heading, double range)
+        public Missile(IReadonlyRobot robot, Tick matchStart, int id, double locX, double locY, double heading, double range)
         {
             _launchTick = Tick.Now;
 

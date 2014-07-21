@@ -38,8 +38,8 @@ namespace CSharpRobotsWPF
         {
             _mainWindow = mainWindow;
 
-            //_arena = Factory.CreateArena();
-            _arena = Factory.CreateDoublePrecisionArena();
+            //_arena = Factory.CreateCRobotArena();
+            _arena = Factory.CreateJRobotArena();
             _arena.ArenaStarted += OnArenaStarted;
             _arena.ArenaStopped += OnArenaStopped;
             _arena.ArenaStep += OnArenaStep;

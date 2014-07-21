@@ -20,7 +20,7 @@ namespace CSharpRobotsConsole
             Console.BufferWidth = 80;
             Console.BufferHeight = 60;
 
-            IReadonlyArena arena = Factory.CreateArena();
+            IReadonlyArena arena = Factory.CreateCRobotArena();
             arena.ArenaStarted += OnArenaStarted;
             arena.ArenaStep += DisplayArena;
 

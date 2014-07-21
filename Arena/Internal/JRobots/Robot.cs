@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 using Common;
 using SDK;
 
-namespace Arena.Internal
+namespace Arena.Internal.JRobots
 {
-    internal class DoublePrecisionRobot : ISDKRobot, ISDKCheat, IReadonlyRobot
+    internal class Robot : ISDKRobot, ISDKCheat, IReadonlyRobot
     {
         private const double Tolerance = 0.00001;
 
@@ -18,7 +18,7 @@ namespace Arena.Internal
         private Task _mainTask;
         private CountdownEvent _syncCountdownEvent;
 
-        private DoublePrecisionArena _arena;
+        private Arena _arena;
         private SDK.Robot _userRobot;
 
         private int _id;
@@ -75,19 +75,19 @@ namespace Arena.Internal
             get { return _damage; }
         }
 
-        public DoublePrecisionRobot()
+        public Robot()
         {
             Statistics = new RobotStatistics();
 
             _state = RobotStates.Created;
         }
 
-        public void Initialize(SDK.Robot userRobot, DoublePrecisionArena arena, string teamName, int id, int team, int locX, int locY)
+        public void Initialize(SDK.Robot userRobot, Arena arena, string teamName, int id, int team, int locX, int locY)
         {
             Initialize(userRobot, arena, teamName, id, team, locX, locY, 0, 0);
         }
 
-        public void Initialize(SDK.Robot userRobot, DoublePrecisionArena arena, string teamName, int id, int team, int locX, int locY, int heading, int speed)
+        public void Initialize(SDK.Robot userRobot, Arena arena, string teamName, int id, int team, int locX, int locY, int heading, int speed)
         {
             _userRobot = userRobot;
             _userRobot.SDK = this;

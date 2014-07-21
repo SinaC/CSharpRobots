@@ -373,12 +373,12 @@ namespace Robots
                     }
                 }
             }
-            if ((o == 100000) || (Math.Abs(p - 100000.0D) < Tolerance))
-            {
-                fire(ub, vb);
-                SDK.Drive(0, 0);
-                findEnemy_multiple_nearest();
-            }
+            //if ((o == 100000) || (Math.Abs(p - 100000.0D) < Tolerance))
+            //{
+            //    fire(ub, vb);
+            //    SDK.Drive(0, 0);
+            //    findEnemy_multiple_nearest();
+            //}
         }
 
         void findEnemy_single()

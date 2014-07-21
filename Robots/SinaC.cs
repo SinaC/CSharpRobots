@@ -31,19 +31,14 @@ namespace Robots
             Circling, // -> GoToDestination
         }
 
+        private static SinaC[] _friends = new SinaC[8];
+
         // Robot parameters
         private const double Pi = 3.14159;
         private const bool UpgradedPrecision = true;
         private const bool UseInterpolation = true;
         private const double FriendRange = 20;
         private const double TrackStepTime = 0.25;
-
-        // Shared infos between team members
-        private static readonly int[] TeamLocX = new int[8];
-        private static readonly int[] TeamLocY = new int[8];
-        private static readonly int[] TeamDamage = new int[8];
-        private static readonly double[] TeamEnemyX = new double[8];
-        private static readonly double[] TeamEnemyY = new double[8];
 
         //
         private int _teamCount; // number of members in team
@@ -72,6 +67,7 @@ namespace Robots
         private double _currentEnemyY;
         private double _currentEnemySpeedX;
         private double _currentEnemySpeedY;
+        private double _currentEnemyAcquiredTime;
 
         // Previous state
         private int _previousLocX;
@@ -103,6 +99,8 @@ namespace Robots
         {
             SDK.LogLine("{0:0.00} - Init - v5", SDK.Time);
 
+            _friends[SDK.Id] = this;
+
             _arenaSize = SDK.Parameters["ArenaSize"];
             _maxDamage = SDK.Parameters["MaxDamage"];
             _missileSpeed = SDK.Parameters["MissileSpeed"];
@@ -120,9 +118,6 @@ namespace Robots
 
             _currentLocX = SDK.LocX;
             _currentLocY = SDK.LocY;
-
-            // Save own location/damage
-            UpdateSharedLocationAndDamage(_currentLocX, _currentLocY, SDK.Damage);
 
             // Find target
             bool found = FindNearestEnemy(_maxExplosionRange);
@@ -163,9 +158,6 @@ namespace Robots
         {
             _currentLocX = SDK.LocX;
             _currentLocY = SDK.LocY;
-
-            // Update shared info
-            UpdateSharedLocationAndDamage(_currentLocX, _currentLocY, SDK.Damage);
 
             double currentTime = SDK.Time;
 
@@ -213,20 +205,7 @@ namespace Robots
             Move();
         }
 
-        #region Current state and shared informations
-
-        private void UpdateSharedLocationAndDamage(int locX, int locY, int damage)
-        {
-            TeamLocX[_id] = locX;
-            TeamLocY[_id] = locY;
-            TeamDamage[_id] = damage;
-        }
-
-        private void UpdateSharedEnemyLocation(double locX, double locY)
-        {
-            TeamEnemyX[_id] = locX;
-            TeamEnemyY[_id] = locY;
-        }
+        #region Current state
 
         private void SaveCurrentState()
         {
@@ -276,9 +255,7 @@ namespace Robots
                         _currentEnemyRange = preciseRange;
                         _currentEnemyX = enemyX;
                         _currentEnemyY = enemyY;
-
-                        // Save enemy to shared
-                        UpdateSharedEnemyLocation(_currentEnemyX, _currentEnemyY);
+                        _currentEnemyAcquiredTime = SDK.Time;
 
                         SDK.LogLine("FIND CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
                         SDK.LogLine("FIND ENEMY A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
@@ -337,9 +314,7 @@ namespace Robots
                 _currentEnemyRange = preciseRange;
                 _currentEnemyX = enemyX;
                 _currentEnemyY = enemyY;
-
-                // Save enemy to shared
-                UpdateSharedEnemyLocation(_currentEnemyX, _currentEnemyY);
+                _currentEnemyAcquiredTime = SDK.Time;
 
                 SDK.LogLine("TRACK CHEAT A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", cheatAngle, cheatRange, cheatX, cheatY);
                 SDK.LogLine("TRACK ENEMY A:{0:0.0000} R:{1:0.0000} X:{2:0.0000} Y:{3:0.0000}", _currentEnemyAngle, _currentEnemyRange, _currentEnemyX, _currentEnemyY);
@@ -372,6 +347,30 @@ namespace Robots
                     preciseAngle = a + 0.125;
                 }
             }
+        }
+        
+        private bool IsFriendlyTarget(double locX, double locY)
+        {
+            if (_teamCount > 1)
+            {
+                //SDK.LogLine("CHECKING IF FRIENDLY TARGET {0} - {1}, {2}", _id, locX, locY);
+                for (int i = 0; i < _teamCount; i++)
+                    //if (i != _id && TeamDamage[i] < _maxDamage) // don't consider myself or dead teammate
+                    //{
+                    //    SDK.LogLine("TEAM MEMBER {0} : {1}, {2}  |  {3}, {4}", i, TeamLocX[i], TeamLocY[i], _friends[i].SDK.LocX, _friends[i].SDK.LocY);
+                    //    double distance = Distance(locX, locY, TeamLocX[i], TeamLocY[i]);
+                    //    if (distance < FriendRange)
+                    //        return true;
+                    //}
+                    if (i != _id && _friends[i] != null && _friends[i].SDK.Damage < _maxDamage) // don't consider myself or dead teammate
+                    {
+                        SDK.LogLine("TEAM MEMBER {0} : {1}, {2}", i, _friends[i].SDK.LocX, _friends[i].SDK.LocY);
+                        double distance = Distance(locX, locY, _friends[i].SDK.LocX, _friends[i].SDK.LocY);
+                        if (distance < FriendRange)
+                            return true;
+                    }
+            }
+            return false;
         }
 
         #endregion
@@ -430,23 +429,6 @@ namespace Robots
                     _previousCannonTime = SDK.Time;
                     return true;
                 }
-            }
-            return false;
-        }
-
-        private bool IsFriendlyTarget(double locX, double locY)
-        {
-            if (_teamCount > 1)
-            {
-                //SDK.LogLine("CHECKING IF FRIENDLY TARGET {0} - {1}, {2}", _id, locX, locY);
-                for (int i = 0; i < _teamCount; i++)
-                    if (i != _id && TeamDamage[i] < _maxDamage) // don't consider myself or dead teammate
-                    {
-                        //SDK.LogLine("TEAM MEMBER {0} : {1}, {2}", i, TeamLocX[i], TeamLocY[i]);
-                        double distance = Distance(locX, locY, TeamLocX[i], TeamLocY[i]);
-                        if (distance < FriendRange)
-                            return true;
-                    }
             }
             return false;
         }
