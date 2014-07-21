@@ -40,6 +40,7 @@
     <Compile Include="HHRobot.cs" />
     <Compile Include="Broken\Phalanx.cs" />
     <Compile Include="Maruko.cs" />
+    <Compile Include="Mouth.cs" />
     <Compile Include="Platoon.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rabbit.cs" />
