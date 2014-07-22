@@ -69,6 +69,8 @@ namespace Arena.Internal.CRobots
         private readonly List<Missile> _missiles;
         private int _missileId;
 
+        private int _robotCount;
+
         private Tick _lastStepTick;
         private int _stepCount;
         private readonly RandomUnique _randomUnique;
@@ -105,6 +107,11 @@ namespace Arena.Internal.CRobots
         int IReadonlyArena.ArenaSize
         {
             get { return ParametersSingleton.ArenaSize; }
+        }
+
+        public int RobotByTeam
+        {
+            get { return _robotCount; }
         }
 
         public event ArenaStartedHandler ArenaStarted;
@@ -148,84 +155,51 @@ namespace Arena.Internal.CRobots
 
         public void InitializeSolo(Type robotType, int locX, int locY, int heading, int speed)
         {
-            //try
-            //{
-            //    Mode = ArenaModes.Solo;
-
-            //    _missiles.Clear();
-            //    _robots.Clear();
-            //    WinningTeam = -1;
-            //    _stepCount = 0;
-            //    _missileId = 0;
-
-            //    Type robotSDKType = typeof (SDK.Robot);
-            //    if (!robotType.IsSubclassOf(robotSDKType))
-            //    {
-            //        Log.WriteLine(Log.LogLevels.Error, "Type {0} must be a subclass of {1}", robotType, robotSDKType);
-            //        State = ArenaStates.Error;
-            //    }
-            //    else
-            //    {
-            //        // Create test robot
-            //        SDK.Robot userRobot = Activator.CreateInstance(robotType) as SDK.Robot;
-            //        Robot robot = new Robot();
-            //        robot.Initialize(userRobot, this, robotSDKType.Name, 0, 0, locX, locY, heading, speed);
-            //        _robots.Add(robot);
-
-            //        Log.WriteLine(Log.LogLevels.Info, "Test Robot Type {0} created at location {1},{2}", robotType, robot.LocX, robot.LocY);
-
-            //        State = ArenaStates.Initialized;
-            //    }
-            //}
-            //catch (Exception ex)
-            //{
-            //    // TODO: manage exception
-            //    Log.WriteLine(Log.LogLevels.Error, "Exception while start solo mode. {0}", ex);
-
-            //    // Force robots to stop
-            //    foreach (Robot robot in _robots)
-            //        robot.Stop();
-
-            //    State = ArenaStates.Error;
-            //}
             Mode = ArenaModes.Solo;
-            InitializeMatch(1, _ => new { X = locX, Y = locY}, robotType);
+            InitializeMatch(1, (t, i) => new Tuple<int, int>(locX, locY), robotType);
         }
 
         public void InitializeSingleMatch(Type team1, Type team2)
         {
             Mode = ArenaModes.Single;
-            InitializeMatch(1, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2);
+            InitializeMatch(1, (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next()), team1, team2);
         }
 
         public void InitializeSingleMatch(Type team1, Type team2, int locX1, int locY1, int locX2, int locY2)
         {
             Mode = ArenaModes.Single;
-            InitializeMatch(1, idx => new { X = idx == 0 ? locX1 : locX2, Y = idx == 0 ? locY1 : locY2}, team1, team2);
+            InitializeMatch(1, (t, i) => new Tuple<int, int>(t == 0 ? locX1 : locX2, t == 0 ? locY1 : locY2), team1, team2);
         }
 
         public void InitializeSingle4Match(Type team1, Type team2, Type team3, Type team4)
         {
             Mode = ArenaModes.Single4;
-            InitializeMatch(1, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2, team3, team4);
+            InitializeMatch(1, (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next()), team1, team2, team3, team4);
         }
 
         public void InitializeDoubleMatch(Type team1, Type team2)
         {
             Mode = ArenaModes.Double;
-            InitializeMatch(2, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2);
+            InitializeMatch(2, (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next()), team1, team2);
         }
 
         public void InitializeDouble4Match(Type team1, Type team2, Type team3, Type team4)
         {
             Mode = ArenaModes.Double4;
-            InitializeMatch(2, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2, team3, team4);
+            InitializeMatch(2, (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next()), team1, team2, team3, team4);
         }
 
         public void InitializeTeamMatch(Type team1, Type team2, Type team3, Type team4)
         {
             Mode = ArenaModes.Team;
-            InitializeMatch(8, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2, team3, team4);
+            InitializeMatch(8, (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next()), team1, team2, team3, team4);
+        }
+
+        public void InitializeFreeMode(int robotCount, Func<int, int, Tuple<int, int>> getCoordinatesFunc, params Type[] robotTypes)
+        {
+            Mode = ArenaModes.Free;
+            Func<int, int, Tuple<int, int>> randomCoordinatesFunc = (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next());
+            InitializeMatch(robotCount, getCoordinatesFunc ?? randomCoordinatesFunc, robotTypes);
         }
         
         public void StartMatch()
@@ -363,7 +337,7 @@ namespace Arena.Internal.CRobots
             return _robots.Count(x => x.Team == robot.Team);
         }
 
-        private void InitializeMatch(int count, Func<int, dynamic> getCoordinatesFunc, params Type[] teamType)
+        private void InitializeMatch(int count, Func<int, int, Tuple<int, int>> getCoordinatesFunc, params Type[] teamType)
         {
             try
             {
@@ -373,6 +347,7 @@ namespace Arena.Internal.CRobots
                 WinningTeam = -1;
                 _stepCount = 0;
                 _missileId = 0;
+                _robotCount = count;
 
                 //
                 Type robotType = typeof (SDK.Robot);
@@ -394,8 +369,8 @@ namespace Arena.Internal.CRobots
                     for (int i = 0; i < count; i++)
                         for (int t = 0; t < teamType.Length; t++)
                         {
-                            int x = getCoordinatesFunc(t).X;
-                            int y = getCoordinatesFunc(t).Y;
+                            int x = getCoordinatesFunc(t, i).Item1;
+                            int y = getCoordinatesFunc(t, i).Item2;
                             SDK.Robot userRobot = Activator.CreateInstance(teamType[t]) as SDK.Robot;
                             Robot robot = new Robot();
                             robot.Initialize(userRobot, this, teamType[t].Name, i, t, x, y);

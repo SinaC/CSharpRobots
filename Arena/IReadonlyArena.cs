@@ -16,6 +16,7 @@ namespace Arena
         Tick MatchStart { get; }
 
         int ArenaSize { get; }
+        int RobotByTeam { get; }
 
         int WinningTeam { get; }
 
@@ -35,6 +36,7 @@ namespace Arena
         void InitializeDoubleMatch(Type team1, Type team2);
         void InitializeDouble4Match(Type team1, Type team2, Type team3, Type team4);
         void InitializeTeamMatch(Type team1, Type team2, Type team3, Type team4);
+        void InitializeFreeMode(int robotCount, Func<int, int, Tuple<int, int>> getCoordinatesFunc, params Type[] robotTypes);
 
         void StartMatch();
         void StopMatch();

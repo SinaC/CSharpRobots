@@ -45,6 +45,8 @@ namespace Arena.Internal.JRobots
         private readonly List<Missile> _missiles;
         private int _missileId;
 
+        private int _robotCount;
+
         private Tick _lastStepTick;
         private int _stepCount;
         private readonly RandomUnique _randomUnique;
@@ -81,6 +83,11 @@ namespace Arena.Internal.JRobots
         int IReadonlyArena.ArenaSize
         {
             get { return ParametersSingleton.ArenaSize; }
+        }
+
+        public int RobotByTeam
+        {
+            get { return _robotCount; }
         }
 
         public event ArenaStartedHandler ArenaStarted;
@@ -125,43 +132,50 @@ namespace Arena.Internal.JRobots
         public void InitializeSolo(Type robotType, int locX, int locY, int heading, int speed)
         {
             Mode = ArenaModes.Solo;
-            InitializeMatch(1, _ => new { X = locX, Y = locY }, robotType);
+            InitializeMatch(1, (t, i) => new Tuple<int, int>(locX, locY), robotType);
         }
 
         public void InitializeSingleMatch(Type team1, Type team2)
         {
             Mode = ArenaModes.Single;
-            InitializeMatch(1, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2);
+            InitializeMatch(1, (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next()), team1, team2);
         }
 
         public void InitializeSingleMatch(Type team1, Type team2, int locX1, int locY1, int locX2, int locY2)
         {
             Mode = ArenaModes.Single;
-            InitializeMatch(1, idx => new { X = idx == 0 ? locX1 : locX2, Y = idx == 0 ? locY1 : locY2 }, team1, team2);
+            InitializeMatch(1, (t, i) => new Tuple<int, int>(t == 0 ? locX1 : locX2, t == 0 ? locY1 : locY2), team1, team2);
         }
 
         public void InitializeSingle4Match(Type team1, Type team2, Type team3, Type team4)
         {
             Mode = ArenaModes.Single4;
-            InitializeMatch(1, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2, team3, team4);
+            InitializeMatch(1, (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next()), team1, team2, team3, team4);
         }
 
         public void InitializeDoubleMatch(Type team1, Type team2)
         {
             Mode = ArenaModes.Double;
-            InitializeMatch(2, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2);
+            InitializeMatch(2, (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next()), team1, team2);
         }
 
         public void InitializeDouble4Match(Type team1, Type team2, Type team3, Type team4)
         {
             Mode = ArenaModes.Double4;
-            InitializeMatch(2, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2, team3, team4);
+            InitializeMatch(2, (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next()), team1, team2, team3, team4);
         }
 
         public void InitializeTeamMatch(Type team1, Type team2, Type team3, Type team4)
         {
             Mode = ArenaModes.Team;
-            InitializeMatch(8, _ => new { X = _randomUnique.Next(), Y = _randomUnique.Next() }, team1, team2, team3, team4);
+            InitializeMatch(8, (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next()), team1, team2, team3, team4);
+        }
+
+        public void InitializeFreeMode(int robotCount, Func<int, int, Tuple<int,int>> getCoordinatesFunc, params Type[] robotTypes)
+        {
+            Mode = ArenaModes.Free;
+            Func<int, int, Tuple<int, int>> randomCoordinatesFunc = (t, i) => new Tuple<int, int>(_randomUnique.Next(), _randomUnique.Next());
+            InitializeMatch(robotCount, getCoordinatesFunc ?? randomCoordinatesFunc, robotTypes);
         }
 
         public void StartMatch()
@@ -244,6 +258,16 @@ namespace Arena.Internal.JRobots
 
         public int Scan(Robot robot, int degrees, int resolution)
         {
+            return ScanAngleMethod(robot, degrees, resolution);
+        }
+
+        public int TeamCount(Robot robot)
+        {
+            return _robots.Count(x => x.Team == robot.Team);
+        }
+
+        private int ScanSectorMethod(Robot robot, int degrees, int resolution)
+        {
             double nearest = Double.MaxValue;
             Robot target = null;
             foreach (Robot r in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
@@ -265,6 +289,11 @@ namespace Arena.Internal.JRobots
             //else
             //    Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] failed to find someone else", robot.TeamName, robot.Id);
 
+            return target != null ? (int)System.Math.Round(nearest) : 0;
+        }
+
+        private int ScanAngleMethod(Robot robot, int degrees, int resolution)
+        {
             double nearest2 = Double.MaxValue;
             Robot target2 = null;
             foreach (Robot r in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
@@ -284,22 +313,15 @@ namespace Arena.Internal.JRobots
                     }
                 }
             }
+            //if (target2 != null)
+            //    Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] found Robot {2}[{3}]", robot.TeamName, robot.Id, target2.Id, target2.Team);
+            //else
+            //    Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] failed to find someone else", robot.TeamName, robot.Id);
 
-            //Debug.Assert(target == target2 && System.Math.Abs(nearest-nearest2) < 0.0001);
-            if (target != target2 || System.Math.Abs(nearest - nearest2) > 0.0001)
-            {
-                Log.WriteLine(Log.LogLevels.Warning, "Different result for sector and angle method: {0:0.0000}|{1:0.0000}   param angle: {2} res: {3}", nearest, nearest2, degrees, resolution);
-            }
-
-            return target != null ? (int)System.Math.Round(nearest) : 0;
+            return target2 != null ? (int)System.Math.Round(nearest2) : 0;
         }
 
-        public int TeamCount(Robot robot)
-        {
-            return _robots.Count(x => x.Team == robot.Team);
-        }
-
-        private void InitializeMatch(int count, Func<int, dynamic> getCoordinatesFunc, params Type[] teamType)
+        private void InitializeMatch(int count, Func<int, int, Tuple<int, int>> getCoordinatesFunc, params Type[] teamType)
         {
             try
             {
@@ -309,6 +331,7 @@ namespace Arena.Internal.JRobots
                 WinningTeam = -1;
                 _stepCount = 0;
                 _missileId = 0;
+                _robotCount = count;
 
                 //
                 Type robotType = typeof(SDK.Robot);
@@ -330,8 +353,8 @@ namespace Arena.Internal.JRobots
                     for (int i = 0; i < count; i++)
                         for (int t = 0; t < teamType.Length; t++)
                         {
-                            int x = getCoordinatesFunc(t).X;
-                            int y = getCoordinatesFunc(t).Y;
+                            int x = getCoordinatesFunc(t, i).Item1;
+                            int y = getCoordinatesFunc(t, i).Item2;
                             SDK.Robot userRobot = Activator.CreateInstance(teamType[t]) as SDK.Robot;
                             Robot robot = new Robot();
                             robot.Initialize(userRobot, this, teamType[t].Name, i, t, x, y);

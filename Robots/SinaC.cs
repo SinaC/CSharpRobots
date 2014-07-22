@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Text;
 using SDK;
 
 namespace Robots
@@ -31,11 +33,17 @@ namespace Robots
             Circling, // -> GoToDestination
         }
 
+        private enum FireModes
+        {
+            Pacific,
+            Aggressive,
+        }
+
         private static SinaC[] _friends = new SinaC[8];
 
         // Robot parameters
         private const double Pi = 3.14159;
-        private const bool UpgradedPrecision = true;
+        private const bool UseUpgradePrecision = true;
         private const bool UseInterpolation = true;
         private const double FriendRange = 20;
         private const double TrackStepTime = 0.25;
@@ -48,6 +56,7 @@ namespace Robots
         private int _fireEnemyRange;
         private MoveModes _moveMode;
         private SharkModes _sharkMode;
+        private FireModes _fireMode;
         private double _driveAngle;
         
         // Simple move
@@ -99,8 +108,15 @@ namespace Robots
         {
             SDK.LogLine("{0:0.00} - Init - v5", SDK.Time);
 
+            // Set move and fire mode
+            _fireMode = FireModes.Pacific;
+            _moveMode = MoveModes.Corner;
+            //_moveMode = MoveModes.Shark; _sharkMode = SharkModes.GoToDestination;
+
+            // Initialize friends array
             _friends[SDK.Id] = this;
 
+            // Get parameters
             _arenaSize = SDK.Parameters["ArenaSize"];
             _maxDamage = SDK.Parameters["MaxDamage"];
             _missileSpeed = SDK.Parameters["MissileSpeed"];
@@ -109,13 +125,13 @@ namespace Robots
             _maxCannonRange = SDK.Parameters["MaxCannonRange"];
             _maxSpeed = SDK.Parameters["MaxSpeed"];
 
+            // Get current/previous state
             _teamCount = SDK.FriendsCount;
             _id = SDK.Id;
             _fireCount = 0;
             _previousTrackTime = SDK.Time;
             _previousDamage = SDK.Damage;
             _previousCannonTime = SDK.Time;
-
             _currentLocX = SDK.LocX;
             _currentLocY = SDK.LocY;
 
@@ -126,9 +142,7 @@ namespace Robots
                 FireOnEnemy(_maxExplosionRange, _maxExplosionRangePlusCannonRange);
             SaveCurrentState();
 
-            _moveMode = MoveModes.Simple;
-
-            //_moveMode = MoveModes.Shark; _sharkMode = SharkModes.GoToDestination;
+            // Init move
 
             // Shark
             if (_moveMode == MoveModes.Shark)
@@ -159,6 +173,10 @@ namespace Robots
             _currentLocX = SDK.LocX;
             _currentLocY = SDK.LocY;
 
+            FindTeamNearestEnemy(0, 700);
+            Move();
+            return;
+
             double currentTime = SDK.Time;
 
             double elapsedTrackTime = currentTime - _previousTrackTime;
@@ -175,7 +193,7 @@ namespace Robots
                     //SDK.LogLine("Enemy LOST, searching a new one");
                     FindNearestEnemy(_maxExplosionRange); // update current state
                     newEnemy = true;
-                    SaveCurrentState(); // save current state, so I could perform an interpolation on new enemy if new enemy is not detected just before firing
+                    SaveCurrentState(); // save current state, so I can perform an interpolation on new enemy if new enemy is not detected just before firing
                 }
                 _previousTrackTime = currentTime;
             }
@@ -202,6 +220,7 @@ namespace Robots
                 SDK.LogLine("Damage detected: hit time {0} estimated shoot time {1}", _lastHitTime, _estimatedEnemyCannonTime);
             }
 
+            // Move
             Move();
         }
 
@@ -237,7 +256,7 @@ namespace Robots
 
                 double preciseRange = r;
                 double preciseAngle = a;
-                if (UpgradedPrecision)
+                if (UseUpgradePrecision)
                     UpdgradePrecision(a, r, out preciseAngle, out preciseRange);
 
                 // Target must be in range
@@ -273,7 +292,7 @@ namespace Robots
         private bool TrackEnemy(double minDistance, double maxRangeDifference)
         {
             //SDK.LogLine("TRACKING ENEMY");
-            // In following method, _currentEnemyAngle and _currentEnemyRange represents angle/range in previous TrackEnemy
+            // In following method, _currentEnemyAngle and _currentEnemyRange represents angle/range in previous TrackEnemy because we save current state only when firing to target or searching a new target
             bool tracked = false;
             int a = (int) SDK.Round(_currentEnemyAngle);
             int r;
@@ -296,7 +315,7 @@ namespace Robots
             {
                 double preciseRange = r;
                 double preciseAngle = a;
-                if (UpgradedPrecision)
+                if (UseUpgradePrecision)
                     UpdgradePrecision(a, r, out preciseAngle, out preciseRange);
                 //
                 double enemyX, enemyY;
@@ -348,7 +367,72 @@ namespace Robots
                 }
             }
         }
-        
+
+        // Scan every enemy in range, compute and sum distance from this enemy to other robot in team
+        // Enemy with the smallest summed distance is the new target
+        private void FindTeamNearestEnemy(double minRange, double maxRange)
+        {
+            //if (SDK.Id != 0)
+            //    return;
+            double bestTeamEnemyX = 0;
+            double bestTeamEnemyY = 0;
+            double bestTeamDistance = Double.MaxValue;
+            int bestRobotInEnemyRange = 0;
+            int enemyInRange = 0;
+            for (int a = 0; a < 360; a++)
+            {
+                int r = SDK.Scan(a, 1);
+
+                double preciseRange = r;
+                double preciseAngle = a;
+                if (UseUpgradePrecision)
+                    UpdgradePrecision(a, r, out preciseAngle, out preciseRange);
+
+                if (preciseRange > minRange && preciseRange < maxRange)
+                {
+                    double enemyX, enemyY;
+                    ComputePoint(_currentLocX, _currentLocY, preciseRange, preciseAngle, out enemyX, out enemyY);
+
+                    if (!IsFriendlyTarget(enemyX, enemyY))
+                    {
+                        enemyInRange++;
+                        //SDK.LogLine("TARGET FOUND at {0:0.0000}, {1:0.0000} from robot {2}", enemyX, enemyY, SDK.Id);
+
+                        // Compute distance from target to every alive team members
+                        double totalDistance = 0;
+                        int robotInEnemyRange = 0;
+                        for (int i = 0; i < _teamCount; i++)
+                        {
+                            if (_friends[i] != null && _friends[i].SDK.Damage < 100)
+                            {
+                                double distance = Distance(enemyX, enemyY, _friends[i].SDK.LocX, _friends[i].SDK.LocY);
+
+                                //SDK.LogLine("\t distance {0:0.0000} from {1:0.0000}, {2:0.0000} to robot {3}", distance, enemyX, enemyY, i);
+
+                                if (distance > minRange && distance < maxRange)
+                                {
+                                    totalDistance += distance;
+                                    robotInEnemyRange++;
+                                }
+                            }
+                        }
+                        //SDK.LogLine("total distance: {0:0.0000}  #robot: {1}", totalDistance, robotInEnemyRange);
+
+                        // It's better to have many robot on the same target than minimizing total distance
+                        if (robotInEnemyRange > bestRobotInEnemyRange || ((robotInEnemyRange == bestRobotInEnemyRange) && totalDistance < bestTeamDistance))
+                        {
+                            bestTeamDistance = totalDistance;
+                            bestTeamEnemyX = enemyX;
+                            bestTeamEnemyY = enemyY;
+                            bestRobotInEnemyRange = robotInEnemyRange;
+                        }
+                    }
+                }
+            }
+
+            SDK.LogLine("BEST TEAM ENEMY FOR ROBOT {0} at {1}, {2} is {3:0.0000}, {4:0.0000} total distance: {5:0.0000} #robot in range: {6} #enemy in range: {7}", SDK.Id, _currentLocX, _currentLocY, bestTeamEnemyX, bestTeamEnemyY, bestTeamDistance, bestRobotInEnemyRange, enemyInRange);
+        }
+
         private bool IsFriendlyTarget(double locX, double locY)
         {
             if (_teamCount > 1)
@@ -364,7 +448,7 @@ namespace Robots
                     //}
                     if (i != _id && _friends[i] != null && _friends[i].SDK.Damage < _maxDamage) // don't consider myself or dead teammate
                     {
-                        SDK.LogLine("TEAM MEMBER {0} : {1}, {2}", i, _friends[i].SDK.LocX, _friends[i].SDK.LocY);
+                        //SDK.LogLine("TEAM MEMBER {0} : {1}, {2}", i, _friends[i].SDK.LocX, _friends[i].SDK.LocY);
                         double distance = Distance(locX, locY, _friends[i].SDK.LocX, _friends[i].SDK.LocY);
                         if (distance < FriendRange)
                             return true;
@@ -418,7 +502,7 @@ namespace Robots
         // Fire interpolation
         private bool FireOnEnemy(double minDistance, double maxDistance)
         {
-            if (_fireEnemyRange > minDistance && _fireEnemyRange < maxDistance) // Don't fire if too far or if too near
+            if (_fireMode == FireModes.Aggressive && _fireEnemyRange > minDistance && _fireEnemyRange < maxDistance) // Don't fire if too far or if too near
             {
                 bool fired = SDK.Cannon(_fireEnemyAngle, _fireEnemyRange) != 0;
                 //Cheat.FireAt(400, 500); bool fired = true;
@@ -800,6 +884,211 @@ namespace Robots
             double radians = SDK.Deg2Rad(degrees);
             x = centerX + distance*SDK.Cos(radians);
             y = centerY + distance*SDK.Sin(radians);
+        }
+
+        #endregion
+
+        #region K-Mean clustering  (http://visualstudiomagazine.com/articles/2013/12/01/k-means-data-clustering-using-c.aspx)
+
+        public static int[] Cluster(double[][] rawData, int numClusters)
+        {
+            // k-means clustering
+            // index of return is tuple ID, cell is cluster ID
+            // ex: [2 1 0 0 2 2] means tuple 0 is cluster 2, tuple 1 is cluster 1, tuple 2 is cluster 0, tuple 3 is cluster 0, etc.
+            // an alternative clustering DS to save space is to use the .NET BitArray class
+            double[][] data = Normalized(rawData); // so large values don't dominate
+
+            bool changed = true; // was there a change in at least one cluster assignment?
+            bool success = true; // were all means able to be computed? (no zero-count clusters)
+
+            // init clustering[] to get things started
+            // an alternative is to initialize means to randomly selected tuples
+            // then the processing loop is
+            // loop
+            //    update clustering
+            //    update means
+            // end loop
+            int[] clustering = InitClustering(data.Length, numClusters, 0); // semi-random initialization
+            double[][] means = Allocate(numClusters, data[0].Length); // small convenience
+
+            int maxCount = data.Length * 10; // sanity check
+            int ct = 0;
+            while (changed && success && ct < maxCount)
+            {
+                ++ct; // k-means typically converges very quickly
+                success = UpdateMeans(data, clustering, means); // compute new cluster means if possible. no effect if fail
+                changed = UpdateClustering(data, clustering, means); // (re)assign tuples to clusters. no effect if fail
+            }
+            // consider adding means[][] as an out parameter - the final means could be computed
+            // the final means are useful in some scenarios (e.g., discretization and RBF centroids)
+            // and even though you can compute final means from final clustering, in some cases it
+            // makes sense to return the means (at the expense of some method signature uglinesss)
+            //
+            // another alternative is to return, as an out parameter, some measure of cluster goodness
+            // such as the average distance between cluster means, or the average distance between tuples in 
+            // a cluster, or a weighted combination of both
+            return clustering;
+        }
+
+        private static double[][] Normalized(double[][] rawData)
+        {
+            // normalize raw data by computing (x - mean) / stddev
+            // primary alternative is min-max:
+            // v' = (v - min) / (max - min)
+
+            // make a copy of input data
+            double[][] result = new double[rawData.Length][];
+            for (int i = 0; i < rawData.Length; ++i)
+            {
+                result[i] = new double[rawData[i].Length];
+                Array.Copy(rawData[i], result[i], rawData[i].Length);
+            }
+
+            for (int j = 0; j < result[0].Length; ++j) // each col
+            {
+                double colSum = result.Sum(t => t[j]);
+                double mean = colSum / result.Length;
+                double sum = result.Sum(t => (t[j] - mean)*(t[j] - mean));
+                double sd = sum / result.Length;
+                for (int i = 0; i < result.Length; ++i)
+                    result[i][j] = (result[i][j] - mean) / sd;
+            }
+            return result;
+        }
+
+        private static int[] InitClustering(int numTuples, int numClusters, int randomSeed)
+        {
+            // init clustering semi-randomly (at least one tuple in each cluster)
+            // consider alternatives, especially k-means++ initialization,
+            // or instead of randomly assigning each tuple to a cluster, pick
+            // numClusters of the tuples as initial centroids/means then use
+            // those means to assign each tuple to an initial cluster.
+            Random random = new Random(randomSeed);
+            int[] clustering = new int[numTuples];
+            for (int i = 0; i < numClusters; ++i) // make sure each cluster has at least one tuple
+                clustering[i] = i;
+            for (int i = numClusters; i < clustering.Length; ++i)
+                clustering[i] = random.Next(0, numClusters); // other assignments random
+            return clustering;
+        }
+
+        private static double[][] Allocate(int numClusters, int numColumns)
+        {
+            // convenience matrix allocator for Cluster()
+            double[][] result = new double[numClusters][];
+            for (int k = 0; k < numClusters; ++k)
+                result[k] = new double[numColumns];
+            return result;
+        }
+
+        private static bool UpdateMeans(double[][] data, int[] clustering, double[][] means)
+        {
+            // returns false if there is a cluster that has no tuples assigned to it
+            // parameter means[][] is really a ref parameter
+
+            // check existing cluster counts
+            // can omit this check if InitClustering and UpdateClustering
+            // both guarantee at least one tuple in each cluster (usually true)
+            int numClusters = means.Length;
+            int[] clusterCounts = new int[numClusters];
+            for (int i = 0; i < data.Length; ++i)
+            {
+                int cluster = clustering[i];
+                ++clusterCounts[cluster];
+            }
+
+            for (int k = 0; k < numClusters; ++k)
+                if (clusterCounts[k] == 0)
+                    return false; // bad clustering. no change to means[][]
+
+            // update, zero-out means so it can be used as scratch matrix 
+            for (int k = 0; k < means.Length; ++k)
+                for (int j = 0; j < means[k].Length; ++j)
+                    means[k][j] = 0.0;
+
+            for (int i = 0; i < data.Length; ++i)
+            {
+                int cluster = clustering[i];
+                for (int j = 0; j < data[i].Length; ++j)
+                    means[cluster][j] += data[i][j]; // accumulate sum
+            }
+
+            for (int k = 0; k < means.Length; ++k)
+                for (int j = 0; j < means[k].Length; ++j)
+                    means[k][j] /= clusterCounts[k]; // danger of div by 0
+            return true;
+        }
+
+        private static bool UpdateClustering(double[][] data, int[] clustering, double[][] means)
+        {
+            // (re)assign each tuple to a cluster (closest mean)
+            // returns false if no tuple assignments change OR
+            // if the reassignment would result in a clustering where
+            // one or more clusters have no tuples.
+
+            int numClusters = means.Length;
+            bool changed = false;
+
+            int[] newClustering = new int[clustering.Length]; // proposed result
+            Array.Copy(clustering, newClustering, clustering.Length);
+
+            double[] distances = new double[numClusters]; // distances from curr tuple to each mean
+
+            for (int i = 0; i < data.Length; ++i) // walk thru each tuple
+            {
+                for (int k = 0; k < numClusters; ++k)
+                    distances[k] = Distance(data[i], means[k]); // compute distances from curr tuple to all k means
+
+                int newClusterID = MinIndex(distances); // find closest mean ID
+                if (newClusterID != newClustering[i])
+                {
+                    changed = true;
+                    newClustering[i] = newClusterID; // update
+                }
+            }
+
+            if (changed == false)
+                return false; // no change so bail and don't update clustering[][]
+
+            // check proposed clustering[] cluster counts
+            int[] clusterCounts = new int[numClusters];
+            for (int i = 0; i < data.Length; ++i)
+            {
+                int cluster = newClustering[i];
+                ++clusterCounts[cluster];
+            }
+
+            for (int k = 0; k < numClusters; ++k)
+                if (clusterCounts[k] == 0)
+                    return false; // bad clustering. no change to clustering[][]
+
+            Array.Copy(newClustering, clustering, newClustering.Length); // update
+            return true; // good clustering and at least one change
+        }
+
+        private static double Distance(double[] tuple, double[] mean)
+        {
+            // Euclidean distance between two vectors for UpdateClustering()
+            // consider alternatives such as Manhattan distance
+            double sumSquaredDiffs = tuple.Select((t, j) => Math.Pow((t - mean[j]), 2)).Sum();
+            return Math.Sqrt(sumSquaredDiffs);
+        }
+
+        private static int MinIndex(double[] distances)
+        {
+            // index of smallest value in array
+            // helper for UpdateClustering()
+            int indexOfMin = 0;
+            double smallDist = distances[0];
+            for (int k = 0; k < distances.Length; ++k)
+            {
+                if (distances[k] < smallDist)
+                {
+                    smallDist = distances[k];
+                    indexOfMin = k;
+                }
+            }
+            return indexOfMin;
         }
 
         #endregion
