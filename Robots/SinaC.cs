@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Linq;
-using System.Text;
 using SDK;
 
 namespace Robots
 {
-    // TODO: eenmy speed estimation is not as accurate as it could
+    // TODO: enemy speed estimation is not as accurate as it could
 
     // Behaviour:
     //  Track previous enemy, if not found, search a new enemy (don't consider teammate as enemy)
@@ -39,7 +38,7 @@ namespace Robots
             Aggressive,
         }
 
-        private static SinaC[] _friends = new SinaC[8];
+        private static readonly SinaC[] Friends = new SinaC[8];
 
         // Robot parameters
         private const double Pi = 3.14159;
@@ -62,7 +61,7 @@ namespace Robots
         // Simple move
         private double _lastRandomTurn;
         
-        // Shark move
+        // Shark move + Square
         private int _sector;
         private int _destinationX;
         private int _destinationY;
@@ -114,7 +113,7 @@ namespace Robots
             //_moveMode = MoveModes.Shark; _sharkMode = SharkModes.GoToDestination;
 
             // Initialize friends array
-            _friends[SDK.Id] = this;
+            Friends[SDK.Id] = this;
 
             // Get parameters
             _arenaSize = SDK.Parameters["ArenaSize"];
@@ -403,9 +402,9 @@ namespace Robots
                         int robotInEnemyRange = 0;
                         for (int i = 0; i < _teamCount; i++)
                         {
-                            if (_friends[i] != null && _friends[i].SDK.Damage < 100)
+                            if (Friends[i] != null && Friends[i].SDK.Damage < 100)
                             {
-                                double distance = Distance(enemyX, enemyY, _friends[i].SDK.LocX, _friends[i].SDK.LocY);
+                                double distance = Distance(enemyX, enemyY, Friends[i].SDK.LocX, Friends[i].SDK.LocY);
 
                                 //SDK.LogLine("\t distance {0:0.0000} from {1:0.0000}, {2:0.0000} to robot {3}", distance, enemyX, enemyY, i);
 
@@ -421,6 +420,7 @@ namespace Robots
                         // It's better to have many robot on the same target than minimizing total distance
                         if (robotInEnemyRange > bestRobotInEnemyRange || ((robotInEnemyRange == bestRobotInEnemyRange) && totalDistance < bestTeamDistance))
                         {
+                            // This is the best target for a team play
                             bestTeamDistance = totalDistance;
                             bestTeamEnemyX = enemyX;
                             bestTeamEnemyY = enemyY;
@@ -446,10 +446,10 @@ namespace Robots
                     //    if (distance < FriendRange)
                     //        return true;
                     //}
-                    if (i != _id && _friends[i] != null && _friends[i].SDK.Damage < _maxDamage) // don't consider myself or dead teammate
+                    if (i != _id && Friends[i] != null && Friends[i].SDK.Damage < _maxDamage) // don't consider myself or dead teammate
                     {
                         //SDK.LogLine("TEAM MEMBER {0} : {1}, {2}", i, _friends[i].SDK.LocX, _friends[i].SDK.LocY);
-                        double distance = Distance(locX, locY, _friends[i].SDK.LocX, _friends[i].SDK.LocY);
+                        double distance = Distance(locX, locY, Friends[i].SDK.LocX, Friends[i].SDK.LocY);
                         if (distance < FriendRange)
                             return true;
                     }

@@ -474,7 +474,7 @@ namespace CSharpRobotsWPF
                     Thickness thickness = new Thickness(0, 0, x == lineCount-1 ? 0 : 1, y == lineCount-1 ? 0 : 1);
                     Border border = new Border
                         {
-                            BorderBrush = new SolidColorBrush(Colors.Black),
+                            BorderBrush = new SolidColorBrush(Colors.DarkGray),
                             BorderThickness = thickness,
                             Background = new SolidColorBrush(Colors.Transparent)
                         };

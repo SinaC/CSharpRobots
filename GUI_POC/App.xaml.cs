@@ -7,5 +7,10 @@ namespace GUI_POC
     /// </summary>
     public partial class App : Application
     {
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            //
+            ExecuteOnUIThread.Initialize();
+        }
     }
 }
