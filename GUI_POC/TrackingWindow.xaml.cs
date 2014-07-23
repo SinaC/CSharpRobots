@@ -13,6 +13,7 @@ namespace GUI_POC
     public partial class TrackingWindow : Window
     {
         private const int StepDelay = 25;
+        public const double SimulationAccelerationFactor = 10;
         private const double ArenaSize = 1000.0;
 
         private readonly List<RobotBase> _robots;
@@ -34,14 +35,14 @@ namespace GUI_POC
                 new TrackingRobot(BattlefieldCanvas, 1, 1, 100, 100, 0, 0, true, true),
                 new TrackingRobot(BattlefieldCanvas, 1, 2, 100, 400, 0, 0, true, true),
                 new TrackingRobot(BattlefieldCanvas, 1, 3, 900, 900, 0, 0, true, true),
-                new TrackingRobot(BattlefieldCanvas, 1, 4, 900, 100, 0, 0, true, true),
+                //new TrackingRobot(BattlefieldCanvas, 1, 4, 900, 100, 0, 0, true, true),
 
                 new RobotBase(BattlefieldCanvas, 2, 1, 200, 100, 0, 0),
                 new RobotBase(BattlefieldCanvas, 2, 2, 200, 300, 0, 0),
                 new RobotBase(BattlefieldCanvas, 2, 3, 500, 300, 0, 0),
-                new RobotBase(BattlefieldCanvas, 2, 4, 800, 400, 0, 0),
-                new RobotBase(BattlefieldCanvas, 2, 5, 200, 800, 0, 0),
-                new RobotBase(BattlefieldCanvas, 2, 5, 700, 700, 0, 0),
+                //new RobotBase(BattlefieldCanvas, 2, 4, 800, 400, 0, 0),
+                //new RobotBase(BattlefieldCanvas, 2, 5, 200, 800, 0, 0),
+                //new RobotBase(BattlefieldCanvas, 2, 5, 700, 700, 0, 0),
             };
 
             //
@@ -69,9 +70,9 @@ namespace GUI_POC
 
         private void UpdateRobot(RobotBase robot)
         {
-            robot.UpdateSimulation(StepDelay);
+            robot.UpdateSimulation(StepDelay * SimulationAccelerationFactor);
             //
-            robot.Step(StepDelay, _robots);
+            robot.Step(StepDelay * SimulationAccelerationFactor, _robots);
             //
             robot.UpdateUI();
         }

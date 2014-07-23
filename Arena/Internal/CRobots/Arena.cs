@@ -120,6 +120,8 @@ namespace Arena.Internal.CRobots
 
         public int WinningTeam { get; private set; }
 
+        public double MatchTime { get; private set; }
+
         public IReadOnlyDictionary<string, int> Parameters
         {
             get { return ParametersSingleton.Instance.Parameters; }
@@ -398,6 +400,8 @@ namespace Arena.Internal.CRobots
 
         private void StopMatch(ArenaStates newState)
         {
+            MatchTime = Tick.ElapsedSeconds(MatchStart);
+            //
             State = newState;
             // Stop main loop
             _cancellationTokenSource.Cancel();

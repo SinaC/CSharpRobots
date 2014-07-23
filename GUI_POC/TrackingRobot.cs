@@ -3,22 +3,27 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Shapes;
 
 namespace GUI_POC
 {
     public class TrackingRobot : RobotBase
     {
+        public const double MinRange = 40;
+        public const double MaxRange = 700;
+
         private double _destinationX;
         private double _destinationY;
 
-        public RobotBase Target { get; set; }
+        public RobotBase TeamTarget { get; set; }
+        public RobotBase NearestTarget { get; set; }
 
         public bool TrackTargetEnabled { get; set; }
         public bool MoveEnabled { get; set; }
 
-        public Line LineToTarget { get; set; }
-        public TextBlock LineLabel { get; set; }
+        public Line LineToTeamTarget { get; set; }
+        public Line LineToNearestTarget { get; set; }
 
         public TrackingRobot(Canvas battlefieldCanvas, int team, int id, double locX, double locY, double speed, double heading, bool trackTargetEnabled, bool moveEnabled)
             : base(battlefieldCanvas, team, id, locX, locY, speed, heading)
@@ -26,14 +31,23 @@ namespace GUI_POC
             TrackTargetEnabled = trackTargetEnabled;
             MoveEnabled = moveEnabled;
 
-            LineToTarget = new Line
+            LineToTeamTarget = new Line
             {
                 // X1, Y1, X2, Y2 will be set by main loop
                 Stroke = TeamBrushes[team],
                 StrokeThickness = 1,
                 Visibility = Visibility.Hidden
             };
-            BattlefieldCanvas.Children.Add(LineToTarget);
+            BattlefieldCanvas.Children.Add(LineToTeamTarget);
+            LineToNearestTarget = new Line
+            {
+                // X1, Y1, X2, Y2 will be set by main loop
+                Stroke = new SolidColorBrush(Colors.Red),
+                StrokeThickness = 1,
+                StrokeDashArray = new DoubleCollection { 2 },
+                Visibility = Visibility.Hidden
+            };
+            BattlefieldCanvas.Children.Add(LineToNearestTarget);
         }
 
         public override void Init()
@@ -56,23 +70,35 @@ namespace GUI_POC
         {
             base.UpdateUI();
 
-            if (Target != null)
+            if (TeamTarget != null)
             {
-                LineToTarget.X1 = ConvertLocX(LocX);
-                LineToTarget.Y1 = ConvertLocY(LocY);
-                LineToTarget.X2 = ConvertLocX(Target.LocX);
-                LineToTarget.Y2 = ConvertLocY(Target.LocY);
-                LineToTarget.Visibility = Visibility.Visible;
+                LineToTeamTarget.X1 = ConvertLocX(LocX);
+                LineToTeamTarget.Y1 = ConvertLocY(LocY);
+                LineToTeamTarget.X2 = ConvertLocX(TeamTarget.LocX);
+                LineToTeamTarget.Y2 = ConvertLocY(TeamTarget.LocY);
+                LineToTeamTarget.Visibility = Visibility.Visible;
             }
             else
-                LineToTarget.Visibility = Visibility.Hidden;
+                LineToTeamTarget.Visibility = Visibility.Hidden;
+            if (NearestTarget != null)
+            {
+                LineToNearestTarget.X1 = ConvertLocX(LocX);
+                LineToNearestTarget.Y1 = ConvertLocY(LocY);
+                LineToNearestTarget.X2 = ConvertLocX(NearestTarget.LocX);
+                LineToNearestTarget.Y2 = ConvertLocY(NearestTarget.LocY);
+                LineToNearestTarget.Visibility = Visibility.Visible;
+            }
+            else
+            LineToNearestTarget.Visibility = Visibility.Hidden;
         }
 
         private void TrackTarget(List<RobotBase> robots)
         {
-            Target = null;
+            TeamTarget = null;
+            NearestTarget = null;
 
             // Scan
+            double bestEnemyDistance = Double.MaxValue;
             double bestTeamEnemyX = 0;
             double bestTeamEnemyY = 0;
             double bestTeamDistance = Double.MaxValue;
@@ -85,6 +111,12 @@ namespace GUI_POC
                 double distanceToEnemy = Distance(enemyX, enemyY, LocX, LocY);
                 if (distanceToEnemy > MinRange && distanceToEnemy < MaxRange)
                 {
+                    // Get nearest
+                    if (distanceToEnemy < bestEnemyDistance)
+                    {
+                        NearestTarget = enemy;
+                        bestEnemyDistance = distanceToEnemy;
+                    }
 
                     // Compute distance from target to every alive team members
                     double totalDistance = 0;
@@ -108,7 +140,7 @@ namespace GUI_POC
                         bestTeamEnemyY = enemyY;
                         bestRobotInEnemyRange = robotInEnemyRange;
 
-                        Target = enemy;
+                        TeamTarget = enemy;
                     }
                 }
             }

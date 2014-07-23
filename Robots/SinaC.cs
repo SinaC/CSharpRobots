@@ -4,7 +4,9 @@ using SDK;
 
 namespace Robots
 {
-    // TODO: enemy speed estimation is not as accurate as it could
+    // TODO: enemy speed estimation is not as accurate as it should
+
+    // TODO: check if check on enemyFound in Single and Multi reacts correctly when new enemy are detected after a phase without any enemy
 
     // Behaviour:
     //  Track previous enemy, if not found, search a new enemy (don't consider teammate as enemy)
@@ -108,9 +110,9 @@ namespace Robots
             SDK.LogLine("{0:0.00} - Init - v5", SDK.Time);
 
             // Set move and fire mode
-            _fireMode = FireModes.Pacific;
-            _moveMode = MoveModes.Corner;
-            //_moveMode = MoveModes.Shark; _sharkMode = SharkModes.GoToDestination;
+            _fireMode = FireModes.Aggressive;
+            //_moveMode = MoveModes.Corner;
+            _moveMode = MoveModes.Shark; _sharkMode = SharkModes.GoToDestination;
 
             // Initialize friends array
             Friends[SDK.Id] = this;
@@ -134,15 +136,6 @@ namespace Robots
             _currentLocX = SDK.LocX;
             _currentLocY = SDK.LocY;
 
-            // Find target
-            bool found = FindNearestEnemy(_maxExplosionRange);
-            ComputeCannonNoInterpolationInformation();
-            if (found)
-                FireOnEnemy(_maxExplosionRange, _maxExplosionRangePlusCannonRange);
-            SaveCurrentState();
-
-            // Init move
-
             // Shark
             if (_moveMode == MoveModes.Shark)
             {
@@ -164,23 +157,40 @@ namespace Robots
                 _destinationY = 100;
             }
 
+            // Find target
+            bool found;
+            if (_teamCount == 1)
+                found = FindNearestEnemy(_maxExplosionRange);
+            else
+                found = FindTeamNearestEnemy(0, _maxExplosionRangePlusCannonRange);
+            ComputeCannonNoInterpolationInformation();
+            if (found)
+                FireOnEnemy(_maxExplosionRange, _maxExplosionRangePlusCannonRange);
+            SaveCurrentState();
+
+            //
             Move();
         }
 
         public override void Step()
         {
+            if (_teamCount == 1)
+                SingleMode();
+            else
+                MultiMode();
+        }
+
+        public void SingleMode()
+        {
             _currentLocX = SDK.LocX;
             _currentLocY = SDK.LocY;
-
-            FindTeamNearestEnemy(0, 700);
-            Move();
-            return;
 
             double currentTime = SDK.Time;
 
             double elapsedTrackTime = currentTime - _previousTrackTime;
             double elapsedCannonTime = currentTime - _previousCannonTime;
 
+            bool enemyFound = false;
             bool newEnemy = false;
             if (elapsedTrackTime > TrackStepTime || elapsedCannonTime >= 1) // track/find enemy
             {
@@ -190,14 +200,74 @@ namespace Robots
                 if (!tracked)
                 {
                     //SDK.LogLine("Enemy LOST, searching a new one");
-                    FindNearestEnemy(_maxExplosionRange); // update current state
-                    newEnemy = true;
-                    SaveCurrentState(); // save current state, so I can perform an interpolation on new enemy if new enemy is not detected just before firing
+                    bool found = FindNearestEnemy(_maxExplosionRange); // update current state
+                    if (found)
+                    {
+                        newEnemy = true;
+                        SaveCurrentState(); // save current state, so I can perform an interpolation on new enemy if new enemy is not detected just before firing
+                        enemyFound = true;
+                    }
+                }
+                else
+                    enemyFound = true;
+                _previousTrackTime = currentTime;
+            }
+
+            if (enemyFound && elapsedCannonTime >= 1) // 1 second since last successfull shoot
+            {
+                // Fire on target
+                if (newEnemy || !UseInterpolation)
+                    ComputeCannonNoInterpolationInformation();
+                else
+                    ComputeCannonInterpolatedInformation(elapsedCannonTime); // this use current and previous state
+                FireOnEnemy(_maxExplosionRange, _maxExplosionRangePlusCannonRange);
+                SaveCurrentState();
+            }
+
+            // Estimate enemy shot time using previous distance between enemy and I, supposing current enemy is the shooter
+            int currentDamage = SDK.Damage;
+            if (currentDamage != _previousDamage)
+            {
+                int damageTaken = currentDamage - _previousDamage;
+                _lastHitTime = currentTime;
+                _estimatedEnemyCannonTime = _lastHitTime - Distance(_currentLocX, _currentLocY, _previousEnemyX, _previousEnemyY) / _missileSpeed;
+                _previousDamage = currentDamage;
+                SDK.LogLine("Damage detected: hit time {0} estimated shoot time {1}", _lastHitTime, _estimatedEnemyCannonTime);
+            }
+
+            // Move
+            Move();
+        }
+
+        public void MultiMode()
+        {
+            _currentLocX = SDK.LocX;
+            _currentLocY = SDK.LocY;
+
+            double currentTime = SDK.Time;
+
+            double elapsedTrackTime = currentTime - _previousTrackTime;
+            double elapsedCannonTime = currentTime - _previousCannonTime;
+
+            bool enemyFound = false;
+            bool newEnemy = false;
+            if (elapsedTrackTime > TrackStepTime || elapsedCannonTime >= 1) // track/find enemy
+            {
+                bool found = FindTeamNearestEnemy(0, _maxExplosionRangePlusCannonRange);
+                if (found)
+                {
+                    enemyFound = true;
+                    if (CheckIfNewEnemy())
+                    {
+                        SDK.LogLine("NEW ENEMY");
+                        newEnemy = true;
+                        SaveCurrentState();
+                    }
                 }
                 _previousTrackTime = currentTime;
             }
 
-            if (elapsedCannonTime >= 1) // 1 second since last successfull shoot
+            if (enemyFound && elapsedCannonTime >= 1) // 1 second since last successfull shoot
             {
                 // Fire on target
                 if (newEnemy || !UseInterpolation)
@@ -345,36 +415,17 @@ namespace Robots
             return tracked;
         }
 
-        // Try to get more precision by scanning 1 degree before and 1 degree after with double resolution and weight 1/8
-        private void UpdgradePrecision(int a, int r, out double preciseAngle, out double preciseRange)
-        {
-            preciseAngle = a;
-            preciseRange = r;
-            if (r > 0)
-            {
-                int rBefore = SDK.Scan(a - 1, 2);
-                int rAfter = SDK.Scan(a + 1, 2);
-                if (rBefore > 0)
-                {
-                    preciseRange = (7.0*r + rBefore)/8.0;
-                    preciseAngle = a - 0.125;
-                }
-                else if (rAfter > 0)
-                {
-                    preciseRange = (7.0*r + rAfter)/8.0;
-                    preciseAngle = a + 0.125;
-                }
-            }
-        }
-
         // Scan every enemy in range, compute and sum distance from this enemy to other robot in team
         // Enemy with the smallest summed distance is the new target
-        private void FindTeamNearestEnemy(double minRange, double maxRange)
+        private bool FindTeamNearestEnemy(double minRange, double maxRange)
         {
             //if (SDK.Id != 0)
             //    return;
+            bool found = false;
             double bestTeamEnemyX = 0;
             double bestTeamEnemyY = 0;
+            double bestTeamEnemyAngle = 0;
+            double bestTeamEnemyRange = 0;
             double bestTeamDistance = Double.MaxValue;
             int bestRobotInEnemyRange = 0;
             int enemyInRange = 0;
@@ -424,13 +475,48 @@ namespace Robots
                             bestTeamDistance = totalDistance;
                             bestTeamEnemyX = enemyX;
                             bestTeamEnemyY = enemyY;
+                            bestTeamEnemyAngle = preciseAngle;
+                            bestTeamEnemyRange = preciseRange;
                             bestRobotInEnemyRange = robotInEnemyRange;
+                            found = true;
                         }
                     }
                 }
             }
+            if (found)
+            {
+                SDK.LogLine("BEST TEAM ENEMY FOR ROBOT {0} at {1}, {2} is {3:0.0000}, {4:0.0000} total distance: {5:0.0000} #robot in range: {6} #enemy in range: {7}", SDK.Id, _currentLocX, _currentLocY, bestTeamEnemyX, bestTeamEnemyY, bestTeamDistance, bestRobotInEnemyRange, enemyInRange);
 
-            SDK.LogLine("BEST TEAM ENEMY FOR ROBOT {0} at {1}, {2} is {3:0.0000}, {4:0.0000} total distance: {5:0.0000} #robot in range: {6} #enemy in range: {7}", SDK.Id, _currentLocX, _currentLocY, bestTeamEnemyX, bestTeamEnemyY, bestTeamDistance, bestRobotInEnemyRange, enemyInRange);
+                // Save enemy position/angle/range
+                _currentEnemyAngle = bestTeamEnemyAngle;
+                _currentEnemyRange = bestTeamEnemyRange;
+                _currentEnemyX = bestTeamEnemyX;
+                _currentEnemyY = bestTeamEnemyY;
+                _currentEnemyAcquiredTime = SDK.Time;
+            }
+            return found;
+        }
+
+        // Try to get more precision by scanning 1 degree before and 1 degree after with double resolution and weight 1/8
+        private void UpdgradePrecision(int a, int r, out double preciseAngle, out double preciseRange)
+        {
+            preciseAngle = a;
+            preciseRange = r;
+            if (r > 0)
+            {
+                int rBefore = SDK.Scan(a - 1, 2);
+                int rAfter = SDK.Scan(a + 1, 2);
+                if (rBefore > 0)
+                {
+                    preciseRange = (7.0 * r + rBefore) / 8.0;
+                    preciseAngle = a - 0.125;
+                }
+                else if (rAfter > 0)
+                {
+                    preciseRange = (7.0 * r + rAfter) / 8.0;
+                    preciseAngle = a + 0.125;
+                }
+            }
         }
 
         private bool IsFriendlyTarget(double locX, double locY)
@@ -455,6 +541,12 @@ namespace Robots
                     }
             }
             return false;
+        }
+
+        private bool CheckIfNewEnemy()
+        {
+            double distance = Distance(_currentEnemyX, _currentEnemyY, _previousEnemyX, _previousEnemyY);
+            return distance > 40;
         }
 
         #endregion
@@ -700,7 +792,14 @@ namespace Robots
                 //SDK.LogLine("Destination reached, slowing down {0:0.00} {1}", _driveAngle, SDK.Speed);
             }
             else
+            {
+                if (_currentLocX == _destinationX && _currentLocY == _destinationY) // give a start impulse if needed
+                {
+                    _driveAngle = 0;
+                    Drive(_driveAngle, 50);
+                }
                 _sharkMode = SharkModes.Circling;
+            }
         }
 
         private void Circling()
@@ -714,6 +813,7 @@ namespace Robots
                         if (_sector != 1)
                         {
                             _sector = 1;
+                            _driveAngle = 315;
                             SDK.Drive(315, 50);
                         }
                     }
@@ -722,12 +822,14 @@ namespace Robots
                         if (_sector != 2)
                         {
                             _sector = 2;
+                            _driveAngle = 270;
                             SDK.Drive(270, 50);
                         }
                     }
                     else if (_sector != 3)
                     {
                         _sector = 3;
+                        _driveAngle = 225;
                         SDK.Drive(225, 50);
                     }
                 }
@@ -738,6 +840,7 @@ namespace Robots
                         if (_sector != 4)
                         {
                             _sector = 4;
+                            _driveAngle = 0;
                             SDK.Drive(0, 50);
                         }
                     }
@@ -746,12 +849,14 @@ namespace Robots
                         if (_sector != 5)
                         {
                             _sector = 5;
+                            _driveAngle = 45;
                             SDK.Drive(45, 50);
                         }
                     }
                     else if (_sector != 6)
                     {
                         _sector = 6;
+                        _driveAngle = 180;
                         SDK.Drive(180, 50);
                     }
                 }
@@ -760,6 +865,7 @@ namespace Robots
                     if (_sector != 7)
                     {
                         _sector = 7;
+                        _driveAngle = 45;
                         SDK.Drive(45, 50);
                     }
                 }
@@ -768,12 +874,14 @@ namespace Robots
                     if (_sector != 8)
                     {
                         _sector = 8;
+                        _driveAngle = 90;
                         SDK.Drive(90, 50);
                     }
                 }
                 else if (_sector != 9)
                 {
                     _sector = 9;
+                    _driveAngle = 135;
                     SDK.Drive(135, 50);
                 }
             }
@@ -794,7 +902,7 @@ namespace Robots
 
         #region Helpers
 
-        private double Clamp(double value, double min, double max)
+        private static double Clamp(double value, double min, double max)
         {
             if (value < min)
                 return min;
@@ -803,7 +911,7 @@ namespace Robots
             return value;
         }
 
-        private int Clamp(int value, int min, int max)
+        private static int Clamp(int value, int min, int max)
         {
             if (value < min)
                 return min;
@@ -835,7 +943,7 @@ namespace Robots
             return smallestDistance;
         }
 
-        private int FixAngle(int angle)
+        private static int FixAngle(int angle)
         {
             angle %= 360;
             if (angle < 0)
@@ -843,7 +951,7 @@ namespace Robots
             return angle;
         }
 
-        private double FixAngle(double angle)
+        private static double FixAngle(double angle)
         {
             angle %= 360.0;
             if (angle < 0)
@@ -866,14 +974,14 @@ namespace Robots
             return SDK.Sqrt(DistanceSquared(x1, y1, x2, y2));
         }
 
-        private double DistanceSquared(double x1, double y1, double x2, double y2)
+        private static double DistanceSquared(double x1, double y1, double x2, double y2)
         {
             double dx = x1 - x2;
             double dy = y1 - y2;
             return dx*dx + dy*dy;
         }
 
-        private void DifferenceRelativeToTime(double elapsed, double previousX, double previousY, double currentX, double currentY, out double relativeX, out double relativeY)
+        private static void DifferenceRelativeToTime(double elapsed, double previousX, double previousY, double currentX, double currentY, out double relativeX, out double relativeY)
         {
             relativeX = (currentX - previousX)/elapsed;
             relativeY = (currentY - previousY)/elapsed;

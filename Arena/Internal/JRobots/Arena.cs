@@ -96,6 +96,8 @@ namespace Arena.Internal.JRobots
 
         public int WinningTeam { get; private set; }
 
+        public double MatchTime { get; private set; }
+
         public IReadOnlyDictionary<string, int> Parameters
         {
             get { return ParametersSingleton.Instance.Parameters; }
@@ -382,6 +384,8 @@ namespace Arena.Internal.JRobots
 
         private void StopMatch(ArenaStates newState)
         {
+            MatchTime = Tick.ElapsedSeconds(MatchStart);
+            //
             State = newState;
             // Stop main loop
             _cancellationTokenSource.Cancel();

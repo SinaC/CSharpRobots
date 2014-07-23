@@ -17,12 +17,8 @@ namespace GUI_POC
             new SolidColorBrush(Colors.Magenta)
         };
 
-        public const double SimulationAccelerationFactor = 10;
         public const double MaxSpeed = 30; // m/s
-        public const double MinRange = 0;
-        public const double MaxRange = 700;
         public const double ArenaSize = 1000;
-
         public int Team { get; set; }
         public int Id { get; set; }
         public double LocX { get; set; }
@@ -81,8 +77,8 @@ namespace GUI_POC
         public virtual void UpdateSimulation(double dt)
         {
             //
-            LocX += CosHeading * Speed * (MaxSpeed / 100.0) * (dt / 1000.0) * SimulationAccelerationFactor;
-            LocY += SinHeading * Speed * (MaxSpeed / 100.0) * (dt / 1000.0) * SimulationAccelerationFactor;
+            LocX += CosHeading * Speed * (MaxSpeed / 100.0) * (dt / 1000.0);
+            LocY += SinHeading * Speed * (MaxSpeed / 100.0) * (dt / 1000.0);
             //
             if (LocX < 0)
                 LocX = 0;

@@ -19,6 +19,7 @@ namespace Arena
         int RobotByTeam { get; }
 
         int WinningTeam { get; }
+        double MatchTime { get; }
 
         List<IReadonlyRobot> Robots { get; }
         List<IReadonlyMissile> Missiles { get; }
