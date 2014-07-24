@@ -1,4 +1,2 @@
-Add watchdog to monitor user Robot and stop a match if a team is considered as cheater by using too many CPU time
-redo speed/acceleration management using double
 Replace RandomUnique with RandomCouple which return a random unique couple instead of a unique value
 virtual clock to allow faster simulation without losing precision
