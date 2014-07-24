@@ -9,7 +9,7 @@ using Common;
 namespace Arena.Internal.JRobots
 {
 
-    internal class Arena : IReadonlyArena
+    internal class Arena : IReadonlyArena, IArenaRobotInteraction
     {
         private struct DamageByRange
         {
@@ -49,15 +49,15 @@ namespace Arena.Internal.JRobots
 
         private Tick _lastStepTick;
         private int _stepCount;
-        private readonly RandomUnique _randomUnique;
 
-        public Random Random { get; private set; }
+        private readonly RandomUnique _randomUnique;
+        private readonly Random _random;
 
         internal Arena()
         {
             // Initialize Random
             _randomUnique = new RandomUnique(0, ParametersSingleton.ArenaSize);
-            Random = new Random();
+            _random = new Random();
 
             //
             _robots = new List<Robot>();
@@ -95,6 +95,8 @@ namespace Arena.Internal.JRobots
         public event ArenaStepHandler ArenaStep;
 
         public int WinningTeam { get; private set; }
+
+        public string WinningTeamName { get; private set; }
 
         public double MatchTime { get; private set; }
 
@@ -206,67 +208,92 @@ namespace Arena.Internal.JRobots
 
         #endregion
 
-        public void CHEAT_FindNearestEnemy(Robot robot, out double degrees, out double range, out double x, out double y)
+        #region IArenaRobotInteraction
+
+        public void FindNearestEnemy(IReadonlyRobot robot, out double degrees, out double range, out double x, out double y)
         {
+            Robot r = robot as Robot;
+            if (r == null)
+                throw new ArgumentException("Invalid type for robot");
+
             degrees = 0;
             range = 0;
             x = 0;
             y = 0;
 
             double nearest = Double.MaxValue;
-            foreach (Robot otherRobot in _robots.Where(r => r.Team != robot.Team))
+            foreach (Robot otherRobot in _robots.Where(t => t.Team != robot.Team))
             {
-                double distance = Common.Math.Distance(robot.LocX, robot.LocY, otherRobot.LocX, otherRobot.LocY);
+                double distance = Common.Math.Distance(r.LocX, r.LocY, otherRobot.LocX, otherRobot.LocY);
                 if (distance < nearest)
                 {
                     nearest = distance;
                     range = distance;
                     x = otherRobot.LocX;
                     y = otherRobot.LocY;
-                    degrees = Common.Math.ToDegrees(System.Math.Atan2(otherRobot.LocY - robot.LocY, otherRobot.LocX - robot.LocX));
+                    degrees = Common.Math.ToDegrees(Common.Math.ComputeAngle(r.LocX, r.LocY, otherRobot.LocX, otherRobot.LocY));
                 }
             }
             degrees = Common.Math.FixDegrees(degrees);
         }
 
-        public void CHEAT_FireAt(Robot robot, double targetX, double targetY)
+        public void FireAt(IReadonlyRobot robot, double targetX, double targetY)
         {
-            double heading = Common.Math.ToDegrees(Common.Math.ComputeAngle(robot.LocX, robot.LocY, targetX, targetY));
-            double range = Common.Math.Distance(robot.LocX, robot.LocY, targetX, targetY);
+            Robot r = robot as Robot;
+            if (r == null)
+                throw new ArgumentException("Invalid type for robot");
+
+            double heading = Common.Math.ToDegrees(Common.Math.ComputeAngle(r.LocX, r.LocY, targetX, targetY));
+            double range = Common.Math.Distance(r.LocX, r.LocY, targetX, targetY);
             lock (_missiles)
             {
-                Missile missile = new Missile(robot, MatchStart, _missileId, robot.LocX, robot.LocY, heading, range);
+                Missile missile = new Missile(robot, MatchStart, _missileId, r.LocX, r.LocY, heading, range);
                 _missiles.Add(missile);
                 _missileId++;
             }
         }
 
-        public int Cannon(Robot robot, Tick launchTick, int degrees, int range)
+        public int Cannon(IReadonlyRobot robot, Tick launchTick, int degrees, int range)
         {
+            Robot r = robot as Robot;
+            if (r == null)
+                throw new ArgumentException("Invalid type for robot");
+
             //Log.WriteLine(Log.LogLevels.Debug, "Launching missile from Robot {0}[{1}] to {2} {3}", robot.TeamName, robot.Id, degrees, range);
             lock (_missiles)
             {
-                Missile missile = new Missile(robot, MatchStart, _missileId, robot.LocX, robot.LocY, degrees, range);
+                Missile missile = new Missile(robot, MatchStart, _missileId, r.LocX, r.LocY, degrees, range);
                 _missiles.Add(missile);
                 _missileId++;
             }
             return 1;
         }
 
-        public void Drive(Robot robot, int degrees, int speed)
+        public void Drive(IReadonlyRobot robot, int degrees, int speed)
         {
-            // NOP: managed in InternalRobot
+            // NOP: managed in Robot
         }
 
-        public int Scan(Robot robot, int degrees, int resolution)
+        public int Scan(IReadonlyRobot robot, int degrees, int resolution)
         {
-            return ScanAngleMethod(robot, degrees, resolution);
+            Robot r = robot as Robot;
+            if (r == null)
+                throw new ArgumentException("Invalid type for robot");
+
+            return ScanAngleMethod(r, degrees, resolution);
         }
 
-        public int TeamCount(Robot robot)
+        public int TeamCount(IReadonlyRobot robot)
         {
             return _robots.Count(x => x.Team == robot.Team);
         }
+
+        public int Rand(int limit)
+        {
+            return _random.Next(limit);
+        }
+
+        #endregion
 
         private int ScanSectorMethod(Robot robot, int degrees, int resolution)
         {
@@ -409,12 +436,15 @@ namespace Arena.Internal.JRobots
             // Wait until every robot has been started (max 2 seconds)
             _robotSyncCountdownEvent.Wait(2000);
 
+            //
+            State = ArenaStates.Running;
+
+            //
+            _lastStepTick = Tick.Now;
+
             Log.WriteLine(Log.LogLevels.Debug, "Robots have really been started, CountdownEvent reached 0");
 
             Log.WriteLine(Log.LogLevels.Info, "Robots started");
-
-            //
-            State = ArenaStates.Running;
 
             //
             FireOnArenaStarted();
@@ -461,7 +491,7 @@ namespace Arena.Internal.JRobots
                 else
                 {
                     // Get real step time
-                    double realStepTime = _lastStepTick == null ? ParametersSingleton.StepDelay : Tick.TotalSeconds(now, _lastStepTick);
+                    double realStepTime = Tick.TotalSeconds(now, _lastStepTick);
                     _lastStepTick = now;
 
                     //Log.WriteLine(Log.LogLevels.Debug, "STEP: {0} {1:0.0000}  {2:0.00}", _stepCount, elapsed, realStepTime);
@@ -524,7 +554,7 @@ namespace Arena.Internal.JRobots
                     if (_robots.All(x => x.State != RobotStates.Created && x.State != RobotStates.Initialized && x.State != RobotStates.Starting)) // Check only if robot has started
                     {
                         // Check if there is a winning team
-                        List<int> teamsWithRobotRunning = _robots.Where(x => x.State == RobotStates.Running).GroupBy(x => x.Team).Select(g => g.Key).ToList();
+                        var teamsWithRobotRunning = _robots.Where(x => x.State == RobotStates.Running).GroupBy(x => x.Team).Select(g => new { Id = g.Key, Name = g.First().TeamName }).ToList();
                         if (teamsWithRobotRunning.Count == 0)
                         {
                             Log.WriteLine(Log.LogLevels.Info, "No robot alive -> Draw");
@@ -534,8 +564,9 @@ namespace Arena.Internal.JRobots
                         else if (teamsWithRobotRunning.Count == 1 && Mode != ArenaModes.Solo)
                         {
                             // And the winner is
-                            WinningTeam = teamsWithRobotRunning[0];
-                            Log.WriteLine(Log.LogLevels.Info, "And the winner is {0}", WinningTeam);
+                            WinningTeam = teamsWithRobotRunning[0].Id;
+                            WinningTeamName = teamsWithRobotRunning[0].Name;
+                            Log.WriteLine(Log.LogLevels.Info, "And the winner is {0}", WinningTeamName);
 
                             StopMatch(ArenaStates.Winner);
                         }

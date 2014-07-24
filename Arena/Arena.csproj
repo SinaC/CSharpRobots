@@ -43,6 +43,7 @@
     <Compile Include="ArenaStates.cs" />
     <Compile Include="Internal\CRobots\Arena.cs" />
     <Compile Include="Factory.cs" />
+    <Compile Include="Internal\IArenaRobotInteraction.cs" />
     <Compile Include="Internal\JRobots\Arena.cs" />
     <Compile Include="Internal\JRobots\Missile.cs" />
     <Compile Include="Internal\JRobots\Robot.cs" />

@@ -33,7 +33,7 @@ namespace Arena.Internal.CRobots
             Robots use a scanner to find other robots. It scans the battlefield with a resolution from 1 to 20 degrees. Scanning the battlefield, the robot receives the distance of the nearest robot (both friend or enemy) or zero if there is no one in that sector.
      */
 
-    internal class Arena : IReadonlyArena
+    internal class Arena : IReadonlyArena, IArenaRobotInteraction
     {
         private struct DamageByRange
         {
@@ -73,15 +73,15 @@ namespace Arena.Internal.CRobots
 
         private Tick _lastStepTick;
         private int _stepCount;
+
         private readonly RandomUnique _randomUnique;
-        
-        public Random Random { get; private set; }
+        private readonly Random _random;
 
         internal Arena()
         {
             // Initialize Random
             _randomUnique = new RandomUnique(0, ParametersSingleton.ArenaSize);
-            Random = new Random();
+            _random = new Random();
 
             //
             _robots = new List<Robot>();
@@ -119,6 +119,8 @@ namespace Arena.Internal.CRobots
         public event ArenaStepHandler ArenaStep;
 
         public int WinningTeam { get; private set; }
+
+        public string WinningTeamName { get; private set; }
 
         public double MatchTime { get; private set; }
 
@@ -230,76 +232,94 @@ namespace Arena.Internal.CRobots
 
         #endregion
 
-        public void CHEAT_FindNearestEnemy(Robot robot, out double degrees, out double range, out double x, out double y)
+        #region IArenaRobotInteraction
+
+        public void FindNearestEnemy(IReadonlyRobot robot, out double degrees, out double range, out double x, out double y)
         {
+            Robot r = robot as Robot;
+            if (r == null)
+                throw new ArgumentException("Invalid type for robot");
+
             degrees = 0;
             range = 0;
             x = 0;
             y = 0;
 
             double nearest = Double.MaxValue;
-            foreach (Robot otherRobot in _robots.Where(r => r.Team != robot.Team))
+            foreach (Robot otherRobot in _robots.Where(t => t.Team != robot.Team))
             {
-                double distance = Common.Math.Distance(robot.LocX, robot.LocY, otherRobot.LocX, otherRobot.LocY);
+                double distance = Common.Math.Distance(r.LocX, r.LocY, otherRobot.LocX, otherRobot.LocY);
                 if (distance < nearest)
                 {
                     nearest = distance;
                     range = distance;
                     x = otherRobot.LocX;
                     y = otherRobot.LocY;
-                    degrees = Common.Math.ToDegrees(System.Math.Atan2(otherRobot.LocY - robot.LocY, otherRobot.LocX - robot.LocX));
+                    degrees = Common.Math.ToDegrees(System.Math.Atan2(otherRobot.LocY - r.LocY, otherRobot.LocX - r.LocX));
                 }
             }
             degrees = Common.Math.FixDegrees(degrees);
         }
 
-        public void CHEAT_FireAt(Robot robot, double targetX, double targetY)
+        public void FireAt(IReadonlyRobot robot, double targetX, double targetY)
         {
-            int heading = (int)System.Math.Round(Common.Math.ToDegrees(Common.Math.ComputeAngle(robot.LocX, robot.LocY, targetX, targetY)));
-            int range = (int)System.Math.Round(Common.Math.Distance(robot.LocX, robot.LocY, targetX, targetY));
+            Robot r = robot as Robot;
+            if (r == null)
+                throw new ArgumentException("Invalid type for robot");
+
+            int heading = (int)System.Math.Round(Common.Math.ToDegrees(Common.Math.ComputeAngle(r.LocX, r.LocY, targetX, targetY)));
+            int range = (int)System.Math.Round(Common.Math.Distance(r.LocX, r.LocY, targetX, targetY));
             lock (_missiles)
             {
-                Missile missile = new Missile(robot, MatchStart, _missileId, robot.LocX, robot.LocY, heading, range);
+                Missile missile = new Missile(robot, MatchStart, _missileId, r.LocX, r.LocY, heading, range);
                 _missiles.Add(missile);
                 _missileId++;
             }
         }
 
-        public int Cannon(Robot robot, Tick launchTick, int degrees, int range)
+        public int Cannon(IReadonlyRobot robot, Tick launchTick, int degrees, int range)
         {
+            Robot r = robot as Robot;
+            if (r == null)
+                throw new ArgumentException("Invalid type for robot");
+
             //Log.WriteLine(Log.LogLevels.Debug, "Launching missile from Robot {0}[{1}] to {2} {3}", robot.TeamName, robot.Id, degrees, range);
             lock (_missiles)
             {
-                Missile missile = new Missile(robot, MatchStart, _missileId, robot.LocX, robot.LocY, degrees, range);
+                Missile missile = new Missile(robot, MatchStart, _missileId, r.LocX, r.LocY, degrees, range);
                 _missiles.Add(missile);
                 _missileId++;
             }
             return 1;
         }
 
-        public void Drive(Robot robot, int degrees, int speed)
+        public void Drive(IReadonlyRobot robot, int degrees, int speed)
         {
             // NOP: managed in InternalRobot
         }
 
-        public int Scan(Robot robot, int degrees, int resolution)
+        public int Scan(IReadonlyRobot robot, int degrees, int resolution)
         {
-            double nearest = Double.MaxValue;
-            Robot target = null;
-            foreach (Robot r in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
-            {
-                // Sector method
-                bool isInSector = Common.Math.IsInSector(robot.LocX, robot.LocY, degrees, resolution, r.LocX, r.LocY);
-                if (isInSector)
-                {
-                    double distance = Common.Math.Distance(robot.LocX, robot.LocY, r.LocX, r.LocY);
-                    if (distance < nearest)
-                    {
-                        nearest = distance;
-                        target = r;
-                    }
-                }
-            }
+            Robot r = robot as Robot;
+            if (r == null)
+                throw new ArgumentException("Invalid type for robot");
+
+            //double nearest = Double.MaxValue;
+            //Robot target = null;
+            //foreach (Robot enemy in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
+            //{
+            //    // Sector method
+            //    bool isInSector = Common.Math.IsInSector(robot.LocX, robot.LocY, degrees, resolution, enemy.LocX, enemy.LocY);
+            //    if (isInSector)
+            //    {
+            //        double distance = Common.Math.Distance(robot.LocX, robot.LocY, enemy.LocX, enemy.LocY);
+            //        if (distance < nearest)
+            //        {
+            //            nearest = distance;
+            //            target = enemy;
+            //        }
+            //    }
+            //}
             //if (target != null)
             //    Log.WriteLine(Log.LogLevels.Debug, "Robot {0}[{1}] found Robot {2}[{3}]", robot.TeamName, robot.Id, target.Id, target.Team);
             //else
@@ -307,37 +327,45 @@ namespace Arena.Internal.CRobots
 
             double nearest2 = Double.MaxValue;
             Robot target2 = null;
-            foreach (Robot r in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
+            foreach (Robot enemy in _robots.Where(x => x != robot && x.State == RobotStates.Running && x.Damage < ParametersSingleton.MaxDamage))
             {
                 // Angle method
-                double angleRadians = Common.Math.ComputeAngle(robot.LocX, robot.LocY, r.LocX, r.LocY);
+                double angleRadians = Common.Math.ComputeAngle(r.LocX, r.LocY, enemy.LocX, enemy.LocY);
                 double angleDegrees = Common.Math.ToDegrees(angleRadians);
                 double fixedAngle = Common.Math.FixDegrees(angleDegrees);
                 double diff = System.Math.Abs(fixedAngle - degrees);
                 if (diff <= resolution/2.0)
                 {
-                    double distance = Common.Math.Distance(robot.LocX, robot.LocY, r.LocX, r.LocY);
+                    double distance = Common.Math.Distance(r.LocX, r.LocY, enemy.LocX, enemy.LocY);
                     if (distance < nearest2)
                     {
                         nearest2 = distance;
-                        target2 = r;
+                        target2 = enemy;
                     }
                 }
             }
 
-            //Debug.Assert(target == target2 && System.Math.Abs(nearest-nearest2) < 0.0001);
-            if (target != target2 || System.Math.Abs(nearest - nearest2) > 0.0001)
-            {
-                Log.WriteLine(Log.LogLevels.Error, "Different result for sector and angle method: {0:0.0000}|{1:0.0000}   param angle: {2} res: {3}", nearest, nearest2, degrees, resolution);
-            }
+            ////Debug.Assert(target == target2 && System.Math.Abs(nearest-nearest2) < 0.0001);
+            //if (target != target2 || System.Math.Abs(nearest - nearest2) > 0.0001)
+            //{
+            //    Log.WriteLine(Log.LogLevels.Error, "Different result for sector and angle method: {0:0.0000}|{1:0.0000}   param angle: {2} res: {3}", nearest, nearest2, degrees, resolution);
+            //}
 
-            return target != null ? (int)System.Math.Round(nearest) : 0;
+            //return target != null ? (int)System.Math.Round(nearest) : 0;
+            return target2 != null ? (int)System.Math.Round(nearest2) : 0;
         }
 
-        public int TeamCount(Robot robot)
+        public int TeamCount(IReadonlyRobot robot)
         {
             return _robots.Count(x => x.Team == robot.Team);
         }
+
+        public int Rand(int limit)
+        {
+            return _random.Next(limit);
+        }
+
+        #endregion
 
         private void InitializeMatch(int count, Func<int, int, Tuple<int, int>> getCoordinatesFunc, params Type[] teamType)
         {
@@ -612,7 +640,7 @@ namespace Arena.Internal.CRobots
                     if (_robots.All(x => x.State != RobotStates.Created && x.State != RobotStates.Initialized && x.State != RobotStates.Starting)) // check only if robot has started
                     {
                         // Check if there is a winning team
-                        List<int> teamsWithRobotRunning = _robots.Where(x => x.State == RobotStates.Running).GroupBy(x => x.Team).Select(g => g.Key).ToList();
+                        var teamsWithRobotRunning = _robots.Where(x => x.State == RobotStates.Running).GroupBy(x => x.Team).Select(g => new { Id = g.Key, Name = g.First().TeamName }).ToList();
                         if (teamsWithRobotRunning.Count == 0)
                         {
                             Log.WriteLine(Log.LogLevels.Info, "No robot alive -> Draw");
@@ -622,8 +650,9 @@ namespace Arena.Internal.CRobots
                         else if (teamsWithRobotRunning.Count == 1 && Mode != ArenaModes.Solo)
                         {
                             // And the winner is
-                            WinningTeam = teamsWithRobotRunning[0];
-                            Log.WriteLine(Log.LogLevels.Info, "And the winner is {0}", WinningTeam);
+                            WinningTeam = teamsWithRobotRunning[0].Id;
+                            WinningTeamName = teamsWithRobotRunning[0].Name;
+                            Log.WriteLine(Log.LogLevels.Info, "And the winner is {0}", WinningTeamName);
 
                             StopMatch(ArenaStates.Winner);
                         }

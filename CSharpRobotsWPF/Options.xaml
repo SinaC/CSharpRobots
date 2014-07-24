@@ -37,15 +37,28 @@
             </GroupBox>
 
             <!-- Column 1 -->
-            <GroupBox Grid.Row="0" Grid.Column="1" Margin="5,2" Header="Mode:">
-                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Vertical" x:Name="RadioButtonsStackPanel">
-                    <RadioButton GroupName="Mode" Content="Single" Tag="1"/>
-                    <RadioButton GroupName="Mode" Content="Double" Tag="2"/>
-                    <RadioButton GroupName="Mode" Content="Team" Tag="3"/>
-                    <RadioButton GroupName="Mode" Content="Solo" Tag="4"/>
-                </StackPanel>
-            </GroupBox>
-            
+            <Grid Grid.Row="0" Grid.Column="1" >
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <GroupBox Grid.Row="0" Margin="5,2" Header="Mode:">
+                    <StackPanel Orientation="Vertical" x:Name="ModeRadioButtonsStackPanel">
+                        <RadioButton GroupName="Mode" Content="Single" Tag="1"/>
+                        <RadioButton GroupName="Mode" Content="Double" Tag="2"/>
+                        <RadioButton GroupName="Mode" Content="Team" Tag="3"/>
+                        <RadioButton GroupName="Mode" Content="Solo" Tag="4"/>
+                    </StackPanel>
+                </GroupBox>
+                <GroupBox Grid.Row="1" Margin="5,2" Header="Arena:">
+                    <StackPanel Orientation="Vertical" x:Name="ArenaCheckBoxesStackPanel">
+                        <CheckBox Content="Show trace" Tag="1"/>
+                        <CheckBox Content="Show missile target" Tag="2"/>
+                        <CheckBox Content="Show missile explosion" Tag="3"/>
+                    </StackPanel>
+                </GroupBox>
+            </Grid>
+
             <!-- Row 1 -->
             <Button Grid.Row="1" Grid.Column="0" HorizontalAlignment="Left" Width="120" Margin="2" x:Name="OkButton">
                 <TextBlock Text="Ok"/>

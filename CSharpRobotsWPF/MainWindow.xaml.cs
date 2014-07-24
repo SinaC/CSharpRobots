@@ -25,6 +25,10 @@ namespace CSharpRobotsWPF
 
             OptionsView.OkButton.Click += OptionsOkButtonOnClick;
             OptionsView.CancelButton.Click += OptionsCancelButtonOnClick;
+
+            OptionsView.ArenaCheckBoxesStackPanel.Children.Cast<CheckBox>().First(x => x.Tag as String == "1").IsChecked = _wpfArena.ShowTrace;
+            OptionsView.ArenaCheckBoxesStackPanel.Children.Cast<CheckBox>().First(x => x.Tag as String == "2").IsChecked = _wpfArena.ShowMissileTarget;
+            OptionsView.ArenaCheckBoxesStackPanel.Children.Cast<CheckBox>().First(x => x.Tag as String == "3").IsChecked = _wpfArena.ShowMissileExplosion;
         }
 
         private void OptionsCancelButtonOnClick(object sender, RoutedEventArgs routedEventArgs)
@@ -40,7 +44,13 @@ namespace CSharpRobotsWPF
 
         private void StartButton_Click(object sender, RoutedEventArgs e)
         {
-            string radioTag = OptionsView.RadioButtonsStackPanel.Children.Cast<RadioButton>().Where(x => x.IsChecked.HasValue && x.IsChecked.Value).Select(x => x.Tag as String).FirstOrDefault();
+            // Options
+            var optionsChecked = OptionsView.ArenaCheckBoxesStackPanel.Children.Cast<CheckBox>().Where(x => x.IsChecked.HasValue && x.IsChecked.Value).Select(x => x.Tag as String).ToList();
+            _wpfArena.ShowTrace = optionsChecked.FirstOrDefault(x => x == "1") != null;
+            _wpfArena.ShowMissileTarget = optionsChecked.FirstOrDefault(x => x == "2") != null;
+            _wpfArena.ShowMissileExplosion = optionsChecked.FirstOrDefault(x => x == "3") != null;
+            // Team/Mode
+            string radioTag = OptionsView.ModeRadioButtonsStackPanel.Children.Cast<RadioButton>().Where(x => x.IsChecked.HasValue && x.IsChecked.Value).Select(x => x.Tag as String).FirstOrDefault();
             if (String.IsNullOrWhiteSpace(radioTag) || RobotOptionEntries == null || RobotOptionEntries.Count == 0)
                 _wpfArena.StartStop();
             else

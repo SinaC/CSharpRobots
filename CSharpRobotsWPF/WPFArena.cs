@@ -13,6 +13,10 @@ namespace CSharpRobotsWPF
 {
     public class WPFArena
     {
+        public bool ShowTrace = true;
+        public bool ShowMissileTarget = true;
+        public bool ShowMissileExplosion = true;
+
         private static readonly SolidColorBrush[] TeamBrushes = new[]
             {
                 new SolidColorBrush(Colors.Black),
@@ -62,7 +66,10 @@ namespace CSharpRobotsWPF
             //StartStopInternal(arena => arena.InitializeSolo(typeof(Robots.SinaC), 10, 10, 0, 0));
             //StartStopInternal(arena => arena.InitializeFreeMode(3, GetFreeModeCoordinates, typeof(Robots.SinaC), typeof(Robots.Target)));
             //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Target), 10, 10, 400, 500));
-            StartStopInternal(arena => arena.InitializeFreeMode(3, GetFreeModeCoordinates, typeof(Robots.SinaC), typeof(Robots.Target)));
+            //StartStopInternal(arena => arena.InitializeFreeMode(3, GetFreeModeCoordinates, typeof(Robots.SinaC), typeof(Robots.Target)));
+            //StartStopInternal(arena => arena.InitializeDoubleMatch(typeof(Robots.SinaC), typeof(Robots.Maruko)));
+            //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Target), 475, 500, 50, 150));
+            StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Maruko)));
         }
         
         private static Tuple<int, int> GetFreeModeCoordinates(int teamId, int robotId)
@@ -239,7 +246,7 @@ namespace CSharpRobotsWPF
                     _mainWindow.StatusText.Text = "Running";
                     break;
                 case ArenaStates.Winner:
-                    _mainWindow.StatusText.Text = String.Format("And the winner is Team {0} in {1}", _arena.WinningTeam, _arena.MatchTime);
+                    _mainWindow.StatusText.Text = String.Format("And the winner is Team {0} in {1} seconds", _arena.WinningTeamName, _arena.MatchTime);
                     break;
                 case ArenaStates.Draw:
                     _mainWindow.StatusText.Text = "Draw - No winner";
@@ -277,14 +284,16 @@ namespace CSharpRobotsWPF
                 if (missile.State == MissileStates.Flying)
                 {
                     wpfMissile.FlyingUIElement.Visibility = Visibility.Visible;
-                    wpfMissile.TargetUIElement.Visibility = Visibility.Visible;
+                    if (ShowMissileTarget)
+                        wpfMissile.TargetUIElement.Visibility = Visibility.Visible;
                     wpfMissile.ExplosionUIElement.Visibility = Visibility.Hidden;
                 }
                 else if (missile.State == MissileStates.Exploding || missile.State == MissileStates.Exploded)
                 {
                     wpfMissile.FlyingUIElement.Visibility = Visibility.Hidden;
                     wpfMissile.TargetUIElement.Visibility = Visibility.Hidden;
-                    wpfMissile.ExplosionUIElement.Visibility = Visibility.Visible;
+                    if (ShowMissileExplosion)
+                        wpfMissile.ExplosionUIElement.Visibility = Visibility.Visible;
                 }
             }
         }
@@ -342,6 +351,18 @@ namespace CSharpRobotsWPF
             lock(robot.Statistics)
                 wpfRobot.Statistics = robot.Statistics.Select(x => x).ToDictionary(x => x.Key, x => x.Value);
 
+            if (ShowTrace)
+            {
+                TimeSpan ts = DateTime.Now - wpfRobot.LastTrace;
+                if (ts.TotalMilliseconds > 500)
+                {
+                    double transposedLocX = ConvertLocX(robot.LocX);
+                    double transposedLocY = ConvertLocY(robot.LocY);
+                    wpfRobot.TraceUIElement.Points.Add(new Point(transposedLocX, transposedLocY));
+                    wpfRobot.LastTrace = DateTime.Now;
+                }
+            }
+
             wpfRobot.IsAlive = robot.Damage < _arena.Parameters["MaxDamage"];
             if (robot.State != RobotStates.Running)
                 DeleteRobot(wpfRobot);
@@ -382,12 +403,20 @@ namespace CSharpRobotsWPF
                             Height = 10,
                             Text = String.Format("{0}[{1}]", robot.TeamName, robot.Id),
                             FontSize = 8,
+                        },
+                    TraceUIElement = new Polyline
+                        {
+                            Stroke = TeamBrushes[robot.Team],
+                            StrokeThickness = 1,
+                            Opacity = 0.5,
                         }
                 };
             Panel.SetZIndex(wpfRobot.RobotUIElement, 100);
             Panel.SetZIndex(wpfRobot.LabelUIElement, 100);
+            Panel.SetZIndex(wpfRobot.TraceUIElement, 0);
             _mainWindow.BattlefieldCanvas.Children.Add(wpfRobot.RobotUIElement);
             _mainWindow.BattlefieldCanvas.Children.Add(wpfRobot.LabelUIElement);
+            _mainWindow.BattlefieldCanvas.Children.Add(wpfRobot.TraceUIElement);
             UpdateRobot(wpfRobot, robot);
             _wpfRobots.Add(wpfRobot);
         }
@@ -402,10 +431,20 @@ namespace CSharpRobotsWPF
 
         private void UpdateUIPosition(FrameworkElement element, double locX, double locY)
         {
-            double posX = locX / (_arena.Parameters["ArenaSize"] / _mainWindow.BattlefieldCanvas.Width) - element.Width / 2.0;
-            double posY = locY / (_arena.Parameters["ArenaSize"] / _mainWindow.BattlefieldCanvas.Height) - element.Height / 2.0;
+            double posX = ConvertLocX(locX) - element.Width / 2.0;
+            double posY = ConvertLocY(locY) - element.Height / 2.0;
             Canvas.SetTop(element, posY);
             Canvas.SetLeft(element, posX);
+        }
+
+        protected double ConvertLocX(double locX)
+        {
+            return locX / (_arena.Parameters["ArenaSize"] / _mainWindow.BattlefieldCanvas.Width);
+        }
+
+        protected double ConvertLocY(double locY)
+        {
+            return locY / (_arena.Parameters["ArenaSize"] / _mainWindow.BattlefieldCanvas.Height);
         }
 
         private FrameworkElement CreateExplosionUIElement()

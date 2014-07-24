@@ -46,7 +46,7 @@ namespace CSharpRobotsConsole
                     if (arena.State == ArenaStates.Error)
                         Console.WriteLine("Arena is in error");
                     else if (arena.State == ArenaStates.Winner)
-                        Console.WriteLine("Winner is team {0}", arena.WinningTeam);
+                        Console.WriteLine("Winner is team {0}", arena.WinningTeamName);
                     else if (arena.State == ArenaStates.Draw)
                         Console.WriteLine("Draw");
                     else if (arena.State == ArenaStates.Timeout)

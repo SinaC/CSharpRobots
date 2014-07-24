@@ -5,24 +5,21 @@ using SDK;
 namespace Robots
 {
     // TODO: enemy speed estimation is not as accurate as it should
+    // TODO: check if check on enemyFound in Single and Multi reacts correctly when new enemy is detected after a phase without any enemy
+    // TODO: if enemy is too near (< 30) fire at 30 instead if real range
 
-    // TODO: check if check on enemyFound in Single and Multi reacts correctly when new enemy are detected after a phase without any enemy
-
-    // Behaviour:
-    //  Track previous enemy, if not found, search a new enemy (don't consider teammate as enemy)
-    //  Fire on tracked/found enemy using linear interpolation if enemy tracked, using direct fire if new enemy
-    //  If far from enemy, drive to fire range and fire/try to stay at fire range using zigzag pattern
-    //  Else, square wave pattern trying to change direction to avoid missile
     public class SinaC : Robot
     {
         private enum MoveModes
         {
             // Don't move
             Still,
+            // Straight
+            Straight,
             // Move from one corner to another
             Corner,
-            // Simple mode: go to target if far and random if in range
-            Simple,
+            // Drunk mode: go to target if far and random if in range
+            Drunk,
             // Shark mode: go to predefined destination and then circle
             Shark,
         };
@@ -60,7 +57,7 @@ namespace Robots
         private FireModes _fireMode;
         private double _driveAngle;
         
-        // Simple move
+        // Drunk move
         private double _lastRandomTurn;
         
         // Shark move + Square
@@ -112,7 +109,8 @@ namespace Robots
             // Set move and fire mode
             _fireMode = FireModes.Aggressive;
             //_moveMode = MoveModes.Corner;
-            _moveMode = MoveModes.Shark; _sharkMode = SharkModes.GoToDestination;
+            //_moveMode = MoveModes.Shark; _sharkMode = SharkModes.GoToDestination;
+            _moveMode = MoveModes.Shark;
 
             // Initialize friends array
             Friends[SDK.Id] = this;
@@ -136,48 +134,29 @@ namespace Robots
             _currentLocX = SDK.LocX;
             _currentLocY = SDK.LocY;
 
-            // Shark
-            if (_moveMode == MoveModes.Shark)
-            {
-                if (_teamCount == 1)
-                {
-                    _destinationX = Clamp(_currentLocX, 100, _arenaSize - 100);
-                    _destinationY = Clamp(_currentLocY, 100, _arenaSize - 100);
-                }
-                else
-                {
-                    _destinationX = _currentLocX < 500 ? 100 : 900;
-                    _destinationY = _currentLocY < 500 ? 100 : 900;
-                }
-            }
-            // Corner mode
-            else if (_moveMode == MoveModes.Corner)
-            {
-                _destinationX = 100;
-                _destinationY = 100;
-            }
-
             // Find target
             bool found;
-            if (_teamCount == 1)
-                found = FindNearestEnemy(_maxExplosionRange);
-            else
-                found = FindTeamNearestEnemy(0, _maxExplosionRangePlusCannonRange);
+            //if (_teamCount == 1)
+            //    found = FindNearestEnemy(_maxExplosionRange);
+            //else
+            //    found = FindTeamNearestEnemy(0, _maxExplosionRangePlusCannonRange);
+            found = FindNearestEnemy(_maxExplosionRange);
             ComputeCannonNoInterpolationInformation();
             if (found)
                 FireOnEnemy(_maxExplosionRange, _maxExplosionRangePlusCannonRange);
             SaveCurrentState();
 
             //
-            Move();
+            InitMove();
         }
 
         public override void Step()
         {
-            if (_teamCount == 1)
-                SingleMode();
-            else
-                MultiMode();
+            //if (_teamCount == 1)
+            //    SingleMode();
+            //else
+            //    MultiMode();
+            SingleMode();
         }
 
         public void SingleMode()
@@ -326,7 +305,7 @@ namespace Robots
                 double preciseRange = r;
                 double preciseAngle = a;
                 if (UseUpgradePrecision)
-                    UpdgradePrecision(a, r, out preciseAngle, out preciseRange);
+                    UpgradePrecision(a, r, out preciseAngle, out preciseRange);
 
                 // Target must be in range
                 if (r > minDistance && r < bestRange)
@@ -385,7 +364,7 @@ namespace Robots
                 double preciseRange = r;
                 double preciseAngle = a;
                 if (UseUpgradePrecision)
-                    UpdgradePrecision(a, r, out preciseAngle, out preciseRange);
+                    UpgradePrecision(a, r, out preciseAngle, out preciseRange);
                 //
                 double enemyX, enemyY;
                 ComputePoint(_currentLocX, _currentLocY, preciseRange, preciseAngle, out enemyX, out enemyY);
@@ -433,52 +412,55 @@ namespace Robots
             {
                 int r = SDK.Scan(a, 1);
 
-                double preciseRange = r;
-                double preciseAngle = a;
-                if (UseUpgradePrecision)
-                    UpdgradePrecision(a, r, out preciseAngle, out preciseRange);
-
-                if (preciseRange > minRange && preciseRange < maxRange)
+                if (r > 0)
                 {
-                    double enemyX, enemyY;
-                    ComputePoint(_currentLocX, _currentLocY, preciseRange, preciseAngle, out enemyX, out enemyY);
+                    double preciseRange = r;
+                    double preciseAngle = a;
+                    if (UseUpgradePrecision)
+                        UpgradePrecision(a, r, out preciseAngle, out preciseRange);
 
-                    if (!IsFriendlyTarget(enemyX, enemyY))
+                    if (preciseRange > minRange && preciseRange < maxRange)
                     {
-                        enemyInRange++;
-                        //SDK.LogLine("TARGET FOUND at {0:0.0000}, {1:0.0000} from robot {2}", enemyX, enemyY, SDK.Id);
+                        double enemyX, enemyY;
+                        ComputePoint(_currentLocX, _currentLocY, preciseRange, preciseAngle, out enemyX, out enemyY);
 
-                        // Compute distance from target to every alive team members
-                        double totalDistance = 0;
-                        int robotInEnemyRange = 0;
-                        for (int i = 0; i < _teamCount; i++)
+                        if (!IsFriendlyTarget(enemyX, enemyY))
                         {
-                            if (Friends[i] != null && Friends[i].SDK.Damage < 100)
+                            enemyInRange++;
+                            //SDK.LogLine("TARGET FOUND at {0:0.0000}, {1:0.0000} from robot {2}", enemyX, enemyY, SDK.Id);
+
+                            // Compute distance from target to every alive team members
+                            double totalDistance = 0;
+                            int robotInEnemyRange = 0;
+                            for (int i = 0; i < _teamCount; i++)
                             {
-                                double distance = Distance(enemyX, enemyY, Friends[i].SDK.LocX, Friends[i].SDK.LocY);
-
-                                //SDK.LogLine("\t distance {0:0.0000} from {1:0.0000}, {2:0.0000} to robot {3}", distance, enemyX, enemyY, i);
-
-                                if (distance > minRange && distance < maxRange)
+                                if (Friends[i] != null && Friends[i].SDK.Damage < 100)
                                 {
-                                    totalDistance += distance;
-                                    robotInEnemyRange++;
+                                    double distance = Distance(enemyX, enemyY, Friends[i].SDK.LocX, Friends[i].SDK.LocY);
+
+                                    //SDK.LogLine("\t distance {0:0.0000} from {1:0.0000}, {2:0.0000} to robot {3}", distance, enemyX, enemyY, i);
+
+                                    if (distance > minRange && distance < maxRange)
+                                    {
+                                        totalDistance += distance;
+                                        robotInEnemyRange++;
+                                    }
                                 }
                             }
-                        }
-                        //SDK.LogLine("total distance: {0:0.0000}  #robot: {1}", totalDistance, robotInEnemyRange);
+                            //SDK.LogLine("total distance: {0:0.0000}  #robot: {1}", totalDistance, robotInEnemyRange);
 
-                        // It's better to have many robot on the same target than minimizing total distance
-                        if (robotInEnemyRange > bestRobotInEnemyRange || ((robotInEnemyRange == bestRobotInEnemyRange) && totalDistance < bestTeamDistance))
-                        {
-                            // This is the best target for a team play
-                            bestTeamDistance = totalDistance;
-                            bestTeamEnemyX = enemyX;
-                            bestTeamEnemyY = enemyY;
-                            bestTeamEnemyAngle = preciseAngle;
-                            bestTeamEnemyRange = preciseRange;
-                            bestRobotInEnemyRange = robotInEnemyRange;
-                            found = true;
+                            // It's better to have many robot on the same target than minimizing total distance
+                            if (robotInEnemyRange > bestRobotInEnemyRange || ((robotInEnemyRange == bestRobotInEnemyRange) && totalDistance < bestTeamDistance))
+                            {
+                                // This is the best target for a team play
+                                bestTeamDistance = totalDistance;
+                                bestTeamEnemyX = enemyX;
+                                bestTeamEnemyY = enemyY;
+                                bestTeamEnemyAngle = preciseAngle;
+                                bestTeamEnemyRange = preciseRange;
+                                bestRobotInEnemyRange = robotInEnemyRange;
+                                found = true;
+                            }
                         }
                     }
                 }
@@ -497,8 +479,8 @@ namespace Robots
             return found;
         }
 
-        // Try to get more precision by scanning 1 degree before and 1 degree after with double resolution and weight 1/8
-        private void UpdgradePrecision(int a, int r, out double preciseAngle, out double preciseRange)
+        // Try to get more precision by scanning 1 degree before and 1 degree after with double resolution and weight 1/4
+        private void UpgradePrecision(int a, int r, out double preciseAngle, out double preciseRange)
         {
             preciseAngle = a;
             preciseRange = r;
@@ -508,13 +490,13 @@ namespace Robots
                 int rAfter = SDK.Scan(a + 1, 2);
                 if (rBefore > 0)
                 {
-                    preciseRange = (7.0 * r + rBefore) / 8.0;
-                    preciseAngle = a - 0.125;
+                    preciseRange = (3.0 * r + rBefore) / 4.0;
+                    preciseAngle = a - 0.25;
                 }
                 else if (rAfter > 0)
                 {
-                    preciseRange = (7.0 * r + rAfter) / 8.0;
-                    preciseAngle = a + 0.125;
+                    preciseRange = (3.0 * r + rAfter) / 4.0;
+                    preciseAngle = a + 0.25;
                 }
             }
         }
@@ -613,6 +595,41 @@ namespace Robots
 
         #region Move
 
+        private void InitMove()
+        {
+            switch (_moveMode)
+            {
+                case MoveModes.Still:
+                    SDK.Drive(0, 0);
+                    break;
+                case MoveModes.Straight:
+                    SDK.Drive(180, 100);
+                    break;
+                case MoveModes.Corner:
+                    _destinationX = 100;
+                    _destinationY = 100;
+                    CornerMove();
+                    break;
+                case MoveModes.Drunk:
+                    MoveToEnemy();
+                    break;
+                case MoveModes.Shark:
+                    if (_teamCount == 1)
+                    {
+                        _destinationX = Clamp(_currentLocX, 100, _arenaSize - 100);
+                        _destinationY = Clamp(_currentLocY, 100, _arenaSize - 100);
+                    }
+                    else
+                    {
+                        _destinationX = _currentLocX < 500 ? 100 : 900;
+                        _destinationY = _currentLocY < 500 ? 100 : 900;
+                    }
+                    _sharkMode = SharkModes.GoToDestination;
+                    SharkMove();
+                    break;
+            }
+        }
+
         private void Move()
         {
             switch(_moveMode)
@@ -620,11 +637,14 @@ namespace Robots
                 case MoveModes.Still:
                     SDK.Drive(0,0);
                     break;
+                case MoveModes.Straight:
+                    SDK.Drive(180, 100);
+                    break;
                 case MoveModes.Corner:
                     CornerMove();
                     break;
-                case MoveModes.Simple:
-                    SimpleMove();
+                case MoveModes.Drunk:
+                    DrunkMove();
                     break;
                 case MoveModes.Shark:
                     SharkMove();
@@ -632,9 +652,9 @@ namespace Robots
             }
         }
 
-        #region Simple
+        #region Drunk
 
-        private void SimpleMove()
+        private void DrunkMove()
         {
             double distanceToEnemy = Distance(_currentLocX, _currentLocY, _currentEnemyX, _currentEnemyY);
 
@@ -658,7 +678,7 @@ namespace Robots
                 if (SDK.Time - _lastRandomTurn >= 0.45 * timeMultiplier || distanceToWall > 30.0) // But only if I not turned too recently or very close to wall
                 {
                     Drive(_driveAngle, 50);
-                    //SDK.LogLine("Slowing down {0:0.00} {1}", _driveAngle, SDK.Speed);
+                    SDK.LogLine("Slowing down {0:0.00} {1}", _driveAngle, SDK.Speed);
                 }
             }
             else if (distanceToWall < 30.0) // Escape from wall, moving to center
@@ -666,15 +686,16 @@ namespace Robots
                 _driveAngle = Angle(_currentLocX, _currentLocY, _arenaSize/2.0, _arenaSize/2.0);
                 Drive(_driveAngle, 100);
                 _lastRandomTurn = SDK.Time;
-                //SDK.LogLine("Driving to center away from wall at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
+                SDK.LogLine("Driving to center away from wall at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
             }
-                //SDK.LogLine("t0:{0:0.0000}  t1:{1:0.0000}  diff:{2:0.0000}", t0, t1, diffT);
             else
             {
                 // Check if being hit or didn't turn too recently
                 double t0 = _estimatedEnemyCannonTime - (int) _estimatedEnemyCannonTime; // [0, 1[
                 double t1 = SDK.Time - (int) SDK.Time; // [0, 1[
                 double diffT = SDK.Abs(t0 - t1); // estimate when I have to turn to avoid next shoot
+
+                SDK.LogLine("t0:{0:0.0000}  t1:{1:0.0000}  diff:{2:0.0000}", t0, t1, diffT);
 
                 if ((diffT < 0.05 || diffT > 0.95) && SDK.Time - _lastRandomTurn > 0.5)
                 //else if (SDK.Time - _lastRandomTurn > 0.9) // Change direction randomly if not turned too recently
@@ -683,12 +704,12 @@ namespace Robots
                     if (i == 0)
                     {
                         _driveAngle += 90.0;
-                        //SDK.LogLine("Turning +1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
+                        SDK.LogLine("Turning +1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
                     }
                     else
                     {
                         _driveAngle -= 90.0;
-                        //SDK.LogLine("Turning -1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
+                        SDK.LogLine("Turning -1/4 at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
                     }
                     Drive(_driveAngle, 100);
                     _lastRandomTurn = SDK.Time;
@@ -700,7 +721,7 @@ namespace Robots
         {
             _driveAngle = _currentEnemyAngle;
             Drive(_driveAngle, 100);
-            //SDK.LogLine("Move to enemy at full speed");
+            SDK.LogLine("Move to enemy at full speed");
         }
 
         #endregion
@@ -793,9 +814,9 @@ namespace Robots
             }
             else
             {
-                if (_currentLocX == _destinationX && _currentLocY == _destinationY) // give a start impulse if needed
+                if (SDK.Speed == 0 || (_currentLocX == _destinationX && _currentLocY == _destinationY)) // give a start impulse if needed
                 {
-                    _driveAngle = 0;
+                    _driveAngle = 45;
                     Drive(_driveAngle, 50);
                 }
                 _sharkMode = SharkModes.Circling;

@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Shapes;
 
 namespace CSharpRobotsWPF
 {
@@ -11,6 +13,9 @@ namespace CSharpRobotsWPF
     {
         public FrameworkElement RobotUIElement { get; set; }
         public TextBlock LabelUIElement { get; set; }
+        public Polyline TraceUIElement { get; set; }
+
+        public DateTime LastTrace { get; set; }
 
         private Brush _color;
         public Brush Color

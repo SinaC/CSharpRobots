@@ -17,7 +17,7 @@ namespace Arena.Internal.CRobots
         private Task _mainTask;
         private CountdownEvent _syncCountdownEvent;
 
-        private CRobots.Arena _arena;
+        private IArenaRobotInteraction _arena;
         private SDK.Robot _userRobot;
         private Tick _matchStart;
 
@@ -48,12 +48,12 @@ namespace Arena.Internal.CRobots
             State = RobotStates.Created;
         }
 
-        public void Initialize(SDK.Robot userRobot, CRobots.Arena arena, string teamName, int id, int team, int locX, int locY)
+        public void Initialize(SDK.Robot userRobot, IArenaRobotInteraction arena, string teamName, int id, int team, int locX, int locY)
         {
             Initialize(userRobot, arena, teamName, id, team, locX, locY, 0, 0);
         }
 
-        public void Initialize(SDK.Robot userRobot, CRobots.Arena arena, string teamName, int id, int team, int locX, int locY, int heading, int speed)
+        public void Initialize(SDK.Robot userRobot, IArenaRobotInteraction arena, string teamName, int id, int team, int locX, int locY, int heading, int speed)
         {
             _userRobot = userRobot;
             _userRobot.SDK = this;
@@ -400,7 +400,7 @@ namespace Arena.Internal.CRobots
 
         public int Rand(int limit)
         {
-            return _arena.Random.Next(limit);
+            return _arena.Rand(limit);
         }
 
         public int Sqrt(int value)
@@ -496,12 +496,21 @@ namespace Arena.Internal.CRobots
 
         public void FindNearestEnemy(out double degrees, out double range, out double x, out double y)
         {
-            _arena.CHEAT_FindNearestEnemy(this, out degrees, out range, out x, out y);
+            _arena.FindNearestEnemy(this, out degrees, out range, out x, out y);
         }
 
         public void FireAt(double targetX, double targetY)
         {
-            _arena.CHEAT_FireAt(this, targetX, targetY);
+            _arena.FireAt(this, targetX, targetY);
+        }
+
+        public void Teleport(double locX, double locY)
+        {
+            _currentDistance = 0;
+            _originX = locX;
+            _originY = locY;
+            LocX = locX;
+            LocY = locY;
         }
 
         #endregion
@@ -514,6 +523,8 @@ namespace Arena.Internal.CRobots
                 // So, we have to abort the thread even if it's not recommended
                 //using (_cancellationTokenSource.Token.Register(Thread.CurrentThread.Abort))
                 {
+                    Stopwatch sw = new Stopwatch();
+                    
                     Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}]  signaling/waiting CountdownEvent", TeamName, Id);
                     // Decrement CountdownEvent and wait on it until every robot has started
                     if (!_syncCountdownEvent.Signal())
@@ -521,13 +532,11 @@ namespace Arena.Internal.CRobots
                         Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}]  waiting other robots", TeamName, Id);
                         _syncCountdownEvent.Wait();
                     }
+                    State = RobotStates.Running;
                     Common.Log.WriteLine(Common.Log.LogLevels.Debug, "Robot {0}[{1}]  every robot has been signaled", TeamName, Id);
-
-                    Stopwatch sw = new Stopwatch();
 
                     _userRobot.Init();
 
-                    State = RobotStates.Running;
                     //_userRobot.Main();
                     while (true)
                     {
