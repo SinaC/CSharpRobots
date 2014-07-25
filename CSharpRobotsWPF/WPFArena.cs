@@ -13,7 +13,7 @@ namespace CSharpRobotsWPF
 {
     public class WPFArena
     {
-        public bool ShowTrace = true;
+        public bool ShowTraces = true;
         public bool ShowMissileTarget = true;
         public bool ShowMissileExplosion = true;
 
@@ -246,7 +246,7 @@ namespace CSharpRobotsWPF
                     _mainWindow.StatusText.Text = "Running";
                     break;
                 case ArenaStates.Winner:
-                    _mainWindow.StatusText.Text = String.Format("And the winner is Team {0} in {1} seconds", _arena.WinningTeamName, _arena.MatchTime);
+                    _mainWindow.StatusText.Text = String.Format("And the winner is Team {0} in {1:0.00} seconds", _arena.WinningTeamName, _arena.MatchTime);
                     break;
                 case ArenaStates.Draw:
                     _mainWindow.StatusText.Text = "Draw - No winner";
@@ -266,7 +266,7 @@ namespace CSharpRobotsWPF
                 double maxMatchTime = _arena.Parameters["MaxMatchTime"];
                 double elapsedSeconds = Tick.ElapsedSeconds(_arena.MatchStart);
                 double timeLeft = maxMatchTime - elapsedSeconds;
-                _mainWindow.Title = String.Format("C# Robots - {0:0.00}sec left", timeLeft);
+                _mainWindow.Title = String.Format("C# Robots - {0:0.00} seconds left", timeLeft);
             }
             else
                 _mainWindow.Title = "C# Robots";
@@ -351,7 +351,7 @@ namespace CSharpRobotsWPF
             lock(robot.Statistics)
                 wpfRobot.Statistics = robot.Statistics.Select(x => x).ToDictionary(x => x.Key, x => x.Value);
 
-            if (ShowTrace)
+            if (ShowTraces)
             {
                 TimeSpan ts = DateTime.Now - wpfRobot.LastTrace;
                 if (ts.TotalMilliseconds > 500)
@@ -421,7 +421,7 @@ namespace CSharpRobotsWPF
             _wpfRobots.Add(wpfRobot);
         }
 
-        private void UpdateUIPositionRelative(FrameworkElement element, double stepX, double stepY, FrameworkElement relativeTo)
+        private static void UpdateUIPositionRelative(UIElement element, double stepX, double stepY, UIElement relativeTo)
         {
             double posX = Canvas.GetLeft(relativeTo) + stepX;
             double posY = Canvas.GetTop(relativeTo) + stepY;

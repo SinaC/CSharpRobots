@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using CSharpRobotsWPF.MVVM;
 
 namespace CSharpRobotsWPF
 {
-    public class WPFRobot : INotifyPropertyChanged
+    public class WPFRobot : ObservableObject
     {
         public FrameworkElement RobotUIElement { get; set; }
         public TextBlock LabelUIElement { get; set; }
@@ -21,169 +20,85 @@ namespace CSharpRobotsWPF
         public Brush Color
         {
             get { return _color; }
-            set
-            {
-                if (_color != value)
-                {
-                    _color = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => Color, ref _color, value); }
         }
 
         private bool _isAlive;
         public bool IsAlive
         {
             get { return _isAlive; }
-            set
-            {
-                if (_isAlive != value)
-                {
-                    _isAlive = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => IsAlive, ref _isAlive, value); }
         }
 
         private int _id;
         public int Id
         {
             get { return _id; }
-            set
-            {
-                if (_id != value)
-                {
-                    _id = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => Id, ref _id, value); }
         }
 
         private int _team;
         public int Team
         {
             get { return _team; }
-            set
-            {
-                if (_team != value)
-                {
-                    _team = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => Team, ref _team, value); }
         }
 
         private string _name;
-
         public string Name
         {
             get { return _name; }
-            set
-            {
-                if (_name != value)
-                {
-                    _name = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => Name, ref _name, value); }
         }
 
         private int _damage;
         public int Damage
         {
             get { return _damage; }
-            set
-            {
-                if (_damage != value)
-                {
-                    _damage = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => Damage, ref _damage, value); }
         }
 
         private int _locX;
         public int LocX
         {
             get { return _locX; }
-            set
-            {
-                if (_locX != value)
-                {
-                    _locX = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => LocX, ref _locX, value); }
         }
 
         private int _locY;
         public int LocY
         {
             get { return _locY; }
-            set
-            {
-                if (_locY != value)
-                {
-                    _locY = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => LocY, ref _locY, value); }
         }
 
         private int _heading;
         public int Heading
         {
             get { return _heading; }
-            set
-            {
-                if (_heading != value)
-                {
-                    _heading = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => Heading, ref _heading, value); }
         }
 
         private int _speed;
         public int Speed
         {
             get { return _speed; }
-            set
-            {
-                if (_speed != value)
-                {
-                    _speed = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => Speed, ref _speed, value); }
+
         }
 
         private string _state;
         public string State
         {
             get { return _state; }
-            set
-            {
-                if (_state != value)
-                {
-                    _state = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => State, ref _state, value); }
         }
 
         private int _cannonCount;
         public int CannonCount
         {
             get { return _cannonCount; }
-            set
-            {
-                if (_cannonCount != value)
-                {
-                    _cannonCount = value;
-                    OnPropertyChanged();
-                }
-            }
+            set { Set(() => CannonCount, ref _cannonCount, value); }
         }
 
         private IReadOnlyDictionary<string, int> _statistics;
@@ -192,19 +107,8 @@ namespace CSharpRobotsWPF
             get { return _statistics; }
             set
             {
-                if (_statistics != value)
-                {
-                    _statistics = value;
-                    OnPropertyChanged();
-                }
+                Set(() => Statistics, ref _statistics, value);
             }
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected virtual void OnPropertyChanged([CallerMemberName]string propertyName = null)
-        {
-            PropertyChangedEventHandler handler = PropertyChanged;
-            if (handler != null) handler(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

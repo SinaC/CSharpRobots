@@ -40,7 +40,7 @@ namespace Robots
         private static readonly SinaC[] Friends = new SinaC[8];
 
         // Robot parameters
-        private const double Pi = 3.14159;
+        private const double Pi = 3.1415926;
         private const bool UseUpgradePrecision = true;
         private const bool UseInterpolation = true;
         private const double FriendRange = 20;
@@ -66,8 +66,6 @@ namespace Robots
         private int _destinationY;
 
         // Current state
-        private int _currentLocX;
-        private int _currentLocY;
         private double _currentEnemyAngle;
         private double _currentEnemyRange;
         private double _currentEnemyX;
@@ -77,8 +75,6 @@ namespace Robots
         private double _currentEnemyAcquiredTime;
 
         // Previous state
-        private int _previousLocX;
-        private int _previousLocY;
         private double _previousEnemyAngle;
         private double _previousEnemyRange;
         private double _previousEnemyX;
@@ -131,8 +127,6 @@ namespace Robots
             _previousTrackTime = SDK.Time;
             _previousDamage = SDK.Damage;
             _previousCannonTime = SDK.Time;
-            _currentLocX = SDK.LocX;
-            _currentLocY = SDK.LocY;
 
             // Find target
             bool found;
@@ -161,9 +155,6 @@ namespace Robots
 
         public void SingleMode()
         {
-            _currentLocX = SDK.LocX;
-            _currentLocY = SDK.LocY;
-
             double currentTime = SDK.Time;
 
             double elapsedTrackTime = currentTime - _previousTrackTime;
@@ -209,7 +200,7 @@ namespace Robots
             {
                 int damageTaken = currentDamage - _previousDamage;
                 _lastHitTime = currentTime;
-                _estimatedEnemyCannonTime = _lastHitTime - Distance(_currentLocX, _currentLocY, _previousEnemyX, _previousEnemyY) / _missileSpeed;
+                _estimatedEnemyCannonTime = _lastHitTime - Distance(SDK.LocX, SDK.LocY, _previousEnemyX, _previousEnemyY) / _missileSpeed;
                 _previousDamage = currentDamage;
                 SDK.LogLine("Damage detected: hit time {0} estimated shoot time {1}", _lastHitTime, _estimatedEnemyCannonTime);
             }
@@ -220,9 +211,6 @@ namespace Robots
 
         public void MultiMode()
         {
-            _currentLocX = SDK.LocX;
-            _currentLocY = SDK.LocY;
-
             double currentTime = SDK.Time;
 
             double elapsedTrackTime = currentTime - _previousTrackTime;
@@ -263,7 +251,7 @@ namespace Robots
             {
                 int damageTaken = currentDamage - _previousDamage;
                 _lastHitTime = currentTime;
-                _estimatedEnemyCannonTime = _lastHitTime - Distance(_currentLocX, _currentLocY, _previousEnemyX, _previousEnemyY) / _missileSpeed;
+                _estimatedEnemyCannonTime = _lastHitTime - Distance(SDK.LocX, SDK.LocY, _previousEnemyX, _previousEnemyY) / _missileSpeed;
                 _previousDamage = currentDamage;
                 SDK.LogLine("Damage detected: hit time {0} estimated shoot time {1}", _lastHitTime, _estimatedEnemyCannonTime);
             }
@@ -277,8 +265,6 @@ namespace Robots
         private void SaveCurrentState()
         {
             //SDK.LogLine("Save current state");
-            _previousLocX = _currentLocX;
-            _previousLocY = _currentLocY;
             _previousEnemyAngle = _currentEnemyAngle;
             _previousEnemyRange = _currentEnemyRange;
             _previousEnemyX = _currentEnemyX;
@@ -311,7 +297,7 @@ namespace Robots
                 if (r > minDistance && r < bestRange)
                 {
                     double enemyX, enemyY;
-                    ComputePoint(_currentLocX, _currentLocY, preciseRange, preciseAngle, out enemyX, out enemyY);
+                    ComputePoint(SDK.LocX, SDK.LocY, preciseRange, preciseAngle, out enemyX, out enemyY);
                     if (!IsFriendlyTarget(enemyX, enemyY))
                     {
                         double cheatAngle, cheatRange, cheatX, cheatY;
@@ -367,11 +353,11 @@ namespace Robots
                     UpgradePrecision(a, r, out preciseAngle, out preciseRange);
                 //
                 double enemyX, enemyY;
-                ComputePoint(_currentLocX, _currentLocY, preciseRange, preciseAngle, out enemyX, out enemyY);
+                ComputePoint(SDK.LocX, SDK.LocY, preciseRange, preciseAngle, out enemyX, out enemyY);
 
                 //
                 double rawEnemyX, rawEnemyY;
-                ComputePoint(_currentLocX, _currentLocY, r, a, out rawEnemyX, out rawEnemyY);
+                ComputePoint(SDK.LocX, SDK.LocY, r, a, out rawEnemyX, out rawEnemyY);
 
                 double cheatAngle, cheatRange, cheatX, cheatY;
                 Cheat.FindNearestEnemy(out cheatAngle, out cheatRange, out cheatX, out cheatY);
@@ -422,7 +408,7 @@ namespace Robots
                     if (preciseRange > minRange && preciseRange < maxRange)
                     {
                         double enemyX, enemyY;
-                        ComputePoint(_currentLocX, _currentLocY, preciseRange, preciseAngle, out enemyX, out enemyY);
+                        ComputePoint(SDK.LocX, SDK.LocY, preciseRange, preciseAngle, out enemyX, out enemyY);
 
                         if (!IsFriendlyTarget(enemyX, enemyY))
                         {
@@ -467,7 +453,7 @@ namespace Robots
             }
             if (found)
             {
-                SDK.LogLine("BEST TEAM ENEMY FOR ROBOT {0} at {1}, {2} is {3:0.0000}, {4:0.0000} total distance: {5:0.0000} #robot in range: {6} #enemy in range: {7}", SDK.Id, _currentLocX, _currentLocY, bestTeamEnemyX, bestTeamEnemyY, bestTeamDistance, bestRobotInEnemyRange, enemyInRange);
+                SDK.LogLine("BEST TEAM ENEMY FOR ROBOT {0} at {1}, {2} is {3:0.0000}, {4:0.0000} total distance: {5:0.0000} #robot in range: {6} #enemy in range: {7}", SDK.Id, SDK.LocX, SDK.LocY, bestTeamEnemyX, bestTeamEnemyY, bestTeamDistance, bestRobotInEnemyRange, enemyInRange);
 
                 // Save enemy position/angle/range
                 _currentEnemyAngle = bestTeamEnemyAngle;
@@ -548,7 +534,7 @@ namespace Robots
             //double currentAccelerationX, currentAccelerationY;
             //DifferenceRelativeToTime(elapsedTime, _previousEnemySpeedX, _previousEnemySpeedY, currentSpeedX, currentSpeedY, out currentAccelerationX, out currentAccelerationY);
 
-            SDK.LogLine("{0:0.00} | Enemy position: {1:0.0000}, {2:0.0000} Speed:{3:0.0000}, {4:0.0000} | range {5} angle {6} | Loc:{7},{8}", SDK.Time, _currentEnemyX, _currentEnemyY, _currentEnemySpeedX, _currentEnemySpeedY, _currentEnemyRange, _currentEnemyAngle, _currentLocX, _currentLocY);
+            SDK.LogLine("{0:0.00} | Enemy position: {1:0.0000}, {2:0.0000} Speed:{3:0.0000}, {4:0.0000} | range {5} angle {6} | Loc:{7},{8}", SDK.Time, _currentEnemyX, _currentEnemyY, _currentEnemySpeedX, _currentEnemySpeedY, _currentEnemyRange, _currentEnemyAngle, SDK.LocX, SDK.LocY);
             //SDK.LogLine("{0:0.00} - estimated speed {1:0.0000} {2:0.0000} acceleration {3:0.0000} {4:0.0000}", SDK.Time, _currentEnemySpeedX, _currentEnemySpeedY, currentAccelerationX, currentAccelerationY);
 
             //http://jrobots.sourceforge.net/jjr_tutorials.shtml
@@ -559,21 +545,22 @@ namespace Robots
             // Solving these 2 equations:
             // t = ( sqrt(300^2 D^2 - (DxV)^2) + D(dot)V ) / (300^2 - V^2)  with D = T-R
             // t = ( sqrt(300^2 (Dx^2 + Dy^2) - (DxVy - DyVx)^2) + (DxVx + DyVy) ) / (300^2 - (Vx^2 + Vy^2) )
-            double dX = _currentEnemyX - _currentLocX;
-            double dY = _currentEnemyY - _currentLocY;
+            double currentLocX = SDK.LocX;
+            double currentLocY = SDK.LocY;
+            double dX = _currentEnemyX - currentLocX;
+            double dY = _currentEnemyY - currentLocY;
             double t = SDK.Sqrt(_missileSpeed*_missileSpeed*(dX*dX + dY*dY) - (dX*_currentEnemySpeedY - dY*_currentEnemySpeedX)*(dX*_currentEnemySpeedY - dY*_currentEnemySpeedX) + 0.5)/(_missileSpeed*_missileSpeed - (_currentEnemySpeedX*_currentEnemySpeedX + _currentEnemySpeedY*_currentEnemySpeedY));
             double pX = _currentEnemyX + _currentEnemySpeedX*t;
             double pY = _currentEnemyY + _currentEnemySpeedY*t;
 
-            _fireEnemyAngle = (int)SDK.Round(Angle(_currentLocX, _currentLocY, pX, pY));
-            _fireEnemyRange = (int)SDK.Round(Distance(pX, pY, _currentLocX, _currentLocY));
+            _fireEnemyAngle = (int)SDK.Round(Angle(SDK.LocX, SDK.LocY, pX, pY));
+            _fireEnemyRange = (int)SDK.Round(Distance(pX, pY, currentLocX, currentLocY));
 
             SDK.LogLine("{0:0.00} - estimated position at {1:0.00} {2:0.0000} {3:0.0000}  A:{4:0.0000} R:{5:0.0000}", SDK.Time, SDK.Time + t, pX, pY, FixAngle(_fireEnemyAngle), _fireEnemyRange);
 
             //SDK.LogLine("t: {0:0.0000} (global: {1:0.0000} new enemy position: {2:0.0000}, {3:0.0000}  angle {4:0} range {5:0}", t, SDK.Time + t, pX, pY, angle, range);
         }
 
-        // Fire interpolation
         private bool FireOnEnemy(double minDistance, double maxDistance)
         {
             if (_fireMode == FireModes.Aggressive && _fireEnemyRange > minDistance && _fireEnemyRange < maxDistance) // Don't fire if too far or if too near
@@ -616,13 +603,13 @@ namespace Robots
                 case MoveModes.Shark:
                     if (_teamCount == 1)
                     {
-                        _destinationX = Clamp(_currentLocX, 100, _arenaSize - 100);
-                        _destinationY = Clamp(_currentLocY, 100, _arenaSize - 100);
+                        _destinationX = Clamp(SDK.LocX, 100, _arenaSize - 100);
+                        _destinationY = Clamp(SDK.LocY, 100, _arenaSize - 100);
                     }
                     else
                     {
-                        _destinationX = _currentLocX < 500 ? 100 : 900;
-                        _destinationY = _currentLocY < 500 ? 100 : 900;
+                        _destinationX = SDK.LocX < 500 ? 100 : 900;
+                        _destinationY = SDK.LocY < 500 ? 100 : 900;
                     }
                     _sharkMode = SharkModes.GoToDestination;
                     SharkMove();
@@ -656,7 +643,7 @@ namespace Robots
 
         private void DrunkMove()
         {
-            double distanceToEnemy = Distance(_currentLocX, _currentLocY, _currentEnemyX, _currentEnemyY);
+            double distanceToEnemy = Distance(SDK.LocX, SDK.LocY, _currentEnemyX, _currentEnemyY);
 
             if (distanceToEnemy > _maxExplosionRangePlusCannonRange)
                 MoveToEnemy();
@@ -666,13 +653,13 @@ namespace Robots
 
         private void MoveRandomly()
         {
-            double distanceToTarget = Distance(_currentLocX, _currentLocY, _currentEnemyX, _currentEnemyY);
+            double distanceToTarget = Distance(SDK.LocX, SDK.LocY, _currentEnemyX, _currentEnemyY);
             double timeMultiplier = 1.0; // move less often when far from target
             if (distanceToTarget > 300.0)
                 timeMultiplier = 2.0;
             else if (distanceToTarget > 600.0)
                 timeMultiplier = 3.0;
-            double distanceToWall = SmallestDistanceToWall(_currentLocX, _currentLocY);
+            double distanceToWall = SmallestDistanceToWall(SDK.LocX, SDK.LocY);
             if (SDK.Speed > 50) // Slow down without changing direction
             {
                 if (SDK.Time - _lastRandomTurn >= 0.45 * timeMultiplier || distanceToWall > 30.0) // But only if I not turned too recently or very close to wall
@@ -683,7 +670,7 @@ namespace Robots
             }
             else if (distanceToWall < 30.0) // Escape from wall, moving to center
             {
-                _driveAngle = Angle(_currentLocX, _currentLocY, _arenaSize/2.0, _arenaSize/2.0);
+                _driveAngle = Angle(SDK.LocX, SDK.LocY, _arenaSize/2.0, _arenaSize/2.0);
                 Drive(_driveAngle, 100);
                 _lastRandomTurn = SDK.Time;
                 SDK.LogLine("Driving to center away from wall at full speed {0:0.00} {1}", _driveAngle, SDK.Speed);
@@ -731,43 +718,43 @@ namespace Robots
         private void CornerMove()
         {
             //SDK.Drive(0, SDK.Rand(2) == 0 ? 100 : 50);
-            double distanceToDestination = Distance(_currentLocX, _currentLocY, _destinationX, _destinationY);
+            double distanceToDestination = Distance(SDK.LocX, SDK.LocY, _destinationX, _destinationY);
             if (distanceToDestination < 100 && SDK.Speed > 50)
             {
-                _driveAngle = Angle(_currentLocX, _currentLocY, _destinationX, _destinationY);
+                _driveAngle = Angle(SDK.LocX, SDK.LocY, _destinationX, _destinationY);
                 Drive(_driveAngle, 50);
                 //SDK.LogLine("Set speed to 50 {0:0.0000}", _driveAngle);
             }
             else if (distanceToDestination < 75)
             {
                 // Change corner
-                if (_currentLocX <= 100 && _currentLocY <= 100) // top left, go to top right
+                if (SDK.LocX <= 100 && SDK.LocY <= 100) // top left, go to top right
                 {
                     _destinationX = _arenaSize - 100;
                     //SDK.LogLine("Changing corner: from top left to top right");
                 }
-                else if (_currentLocX >= _arenaSize - 100 && _currentLocY <= 100) // top right, go to bottom right
+                else if (SDK.LocX >= _arenaSize - 100 && SDK.LocY <= 100) // top right, go to bottom right
                 {
                     _destinationY = _arenaSize - 100;
                     //SDK.LogLine("Changing corner: from top right to bottom right");
                 }
-                else if (_currentLocX >= _arenaSize - 100 && _currentLocY >= _arenaSize - 100)  // bottom right, go to bottom left
+                else if (SDK.LocX >= _arenaSize - 100 && SDK.LocY >= _arenaSize - 100)  // bottom right, go to bottom left
                 {
                     _destinationX = 100;
                     //SDK.LogLine("Changing corner: from bottom right to bottom left");
                 }
-                else if (_currentLocX <= 100 && _currentLocY >= _arenaSize - 100) // bottom left, go to top left
+                else if (SDK.LocX <= 100 && SDK.LocY >= _arenaSize - 100) // bottom left, go to top left
                 {
                     _destinationY = 100;
                     //SDK.LogLine("Changing corner: from bottom left to top left");
                 }
-                _driveAngle = Angle(_currentLocX, _currentLocY, _destinationX, _destinationY);
+                _driveAngle = Angle(SDK.LocX, SDK.LocY, _destinationX, _destinationY);
                 Drive(_driveAngle, 100);
                 //SDK.LogLine("Set speed to 100 (1) {0:0.0000}", _driveAngle);
             }
             else
             {
-                _driveAngle = Angle(_currentLocX, _currentLocY, _destinationX, _destinationY);
+                _driveAngle = Angle(SDK.LocX, SDK.LocY, _destinationX, _destinationY);
                 Drive(_driveAngle, 100);
                 //SDK.LogLine("Set speed to 100 (2) {0:0.0000}", _driveAngle);
             }
@@ -797,7 +784,7 @@ namespace Robots
         {
             if (FarFromDestination())
             {
-                _driveAngle = Angle(_currentLocX, _currentLocY, _destinationX, _destinationY);
+                _driveAngle = Angle(SDK.LocX, SDK.LocY, _destinationX, _destinationY);
                 Drive(_driveAngle, 100);
                 //SDK.LogLine("Far from destination {0},{1} go to this destination at full speed {2:0.00} {3}", _destinationX, _destinationY, _driveAngle, SDK.Speed);
             }
@@ -814,7 +801,7 @@ namespace Robots
             }
             else
             {
-                if (SDK.Speed == 0 || (_currentLocX == _destinationX && _currentLocY == _destinationY)) // give a start impulse if needed
+                if (SDK.Speed == 0 || (SDK.LocX == _destinationX && SDK.LocY == _destinationY)) // give a start impulse if needed
                 {
                     _driveAngle = 45;
                     Drive(_driveAngle, 50);
@@ -827,10 +814,13 @@ namespace Robots
         {
             if (SDK.Speed > 0)
             {
-                if (_currentLocX > _destinationX + 15)
+                //SDK.LogLine("Loc: {0}, {1}  Destination: {2}, {3}  Sector:{4}", SDK.LocX, SDK.LocY, _destinationX, _destinationY, _sector);
+                if (SDK.LocX > _destinationX + 15)
                 {
-                    if (_currentLocY > _destinationY + 15)
+                    //SDK.LogLine("X > 15");
+                    if (SDK.LocY > _destinationY + 15)
                     {
+                        //SDK.LogLine("Y > 15 -> 1");
                         if (_sector != 1)
                         {
                             _sector = 1;
@@ -838,8 +828,9 @@ namespace Robots
                             SDK.Drive(315, 50);
                         }
                     }
-                    else if (_currentLocY > _destinationY - 15)
+                    else if (SDK.LocY > _destinationY - 15)
                     {
+                        //SDK.LogLine("Y > -15 -> 2");
                         if (_sector != 2)
                         {
                             _sector = 2;
@@ -849,15 +840,18 @@ namespace Robots
                     }
                     else if (_sector != 3)
                     {
+                        //SDK.LogLine("-> 3");
                         _sector = 3;
                         _driveAngle = 225;
                         SDK.Drive(225, 50);
                     }
                 }
-                else if (_currentLocX > _destinationX - 15)
+                else if (SDK.LocX > _destinationX - 15)
                 {
-                    if (_currentLocY > _destinationY + 15)
+                    //SDK.LogLine("X > -15");
+                    if (SDK.LocY > _destinationY + 15)
                     {
+                        //SDK.LogLine("Y > 15 -> 4");
                         if (_sector != 4)
                         {
                             _sector = 4;
@@ -865,8 +859,9 @@ namespace Robots
                             SDK.Drive(0, 50);
                         }
                     }
-                    else if (_currentLocY > _destinationY - 15)
+                    else if (SDK.LocY > _destinationY - 15)
                     {
+                        //SDK.LogLine("Y > -15 -> 5");
                         if (_sector != 5)
                         {
                             _sector = 5;
@@ -876,13 +871,15 @@ namespace Robots
                     }
                     else if (_sector != 6)
                     {
+                        //SDK.LogLine("-> 6");
                         _sector = 6;
                         _driveAngle = 180;
                         SDK.Drive(180, 50);
                     }
                 }
-                else if (_currentLocY > _destinationY + 15)
+                else if (SDK.LocY > _destinationY + 15)
                 {
+                    //SDK.LogLine("Y > 15 -> 7");
                     if (_sector != 7)
                     {
                         _sector = 7;
@@ -890,8 +887,9 @@ namespace Robots
                         SDK.Drive(45, 50);
                     }
                 }
-                else if (_currentLocY > _destinationY - 15)
+                else if (SDK.LocY > _destinationY - 15)
                 {
+                    //SDK.LogLine("Y > -15 -> 8");
                     if (_sector != 8)
                     {
                         _sector = 8;
@@ -901,6 +899,7 @@ namespace Robots
                 }
                 else if (_sector != 9)
                 {
+                    //SDK.LogLine("-> 9");
                     _sector = 9;
                     _driveAngle = 135;
                     SDK.Drive(135, 50);
@@ -912,8 +911,8 @@ namespace Robots
 
         public bool FarFromDestination()
         {
-            int diffX = _currentLocX - _destinationX;
-            int diffY = _currentLocY - _destinationY;
+            int diffX = SDK.LocX - _destinationX;
+            int diffY = SDK.LocY - _destinationY;
             return diffX * diffX + diffY * diffY > 5500;
         }
 

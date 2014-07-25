@@ -1,11 +1,16 @@
-﻿<UserControl x:Class="CSharpRobotsWPF.Options"
+﻿<UserControl x:Class="CSharpRobotsWPF.Views.Options"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:ViewModels="clr-namespace:CSharpRobotsWPF.ViewModels" 
              mc:Ignorable="d" 
+             d:DataContext="{d:DesignInstance ViewModels:OptionsViewModelDesignData, IsDesignTimeCreatable=True}"
              d:DesignHeight="300" d:DesignWidth="300">
-    <GroupBox Background="AliceBlue" Header="Options">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </UserControl.Resources>
+    <GroupBox Background="AliceBlue" Header="Options" Visibility="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
@@ -15,11 +20,11 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            
+
             <!-- Column 0 -->
             <GroupBox Grid.Row="0" Grid.Column="0" Margin="5,2" Header="Robots:">
-                <ListBox Grid.Row="1" Grid.Column="0" x:Name="RobotList" Margin="5,0" 
-                     ItemsSource="{Binding}">
+                <ListBox Margin="5,0" 
+                         ItemsSource="{Binding RobotInfos}">
                     <ListBox.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel Orientation="Vertical"/>
@@ -43,27 +48,32 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <GroupBox Grid.Row="0" Margin="5,2" Header="Mode:">
-                    <StackPanel Orientation="Vertical" x:Name="ModeRadioButtonsStackPanel">
-                        <RadioButton GroupName="Mode" Content="Single" Tag="1"/>
-                        <RadioButton GroupName="Mode" Content="Double" Tag="2"/>
-                        <RadioButton GroupName="Mode" Content="Team" Tag="3"/>
-                        <RadioButton GroupName="Mode" Content="Solo" Tag="4"/>
+                    <StackPanel Orientation="Vertical">
+                        <RadioButton IsChecked="{Binding ArenaModeSolo, Mode=TwoWay}">Solo</RadioButton>
+                        <RadioButton IsChecked="{Binding ArenaModeSingle, Mode=TwoWay}">Single</RadioButton>
+                        <RadioButton IsChecked="{Binding ArenaModeSingle4, Mode=TwoWay}">Single 4</RadioButton>
+                        <RadioButton IsChecked="{Binding ArenaModeDouble, Mode=TwoWay}">Double</RadioButton>
+                        <RadioButton IsChecked="{Binding ArenaModeDouble4, Mode=TwoWay}">Double 4</RadioButton>
+                        <RadioButton IsChecked="{Binding ArenaModeTeam, Mode=TwoWay}">Team</RadioButton>
+                        <RadioButton IsChecked="{Binding ArenaModeFree, Mode=TwoWay}">Free</RadioButton>
                     </StackPanel>
                 </GroupBox>
                 <GroupBox Grid.Row="1" Margin="5,2" Header="Arena:">
-                    <StackPanel Orientation="Vertical" x:Name="ArenaCheckBoxesStackPanel">
-                        <CheckBox Content="Show trace" Tag="1"/>
-                        <CheckBox Content="Show missile target" Tag="2"/>
-                        <CheckBox Content="Show missile explosion" Tag="3"/>
+                    <StackPanel Orientation="Vertical">
+                        <CheckBox IsChecked="{Binding ShowTraces}">Show traces</CheckBox>
+                        <CheckBox IsChecked="{Binding ShowMissileTarget}">Show missile target</CheckBox>
+                        <CheckBox IsChecked="{Binding ShowMissileExplosion}">Show missile explosion</CheckBox>
                     </StackPanel>
                 </GroupBox>
             </Grid>
 
             <!-- Row 1 -->
-            <Button Grid.Row="1" Grid.Column="0" HorizontalAlignment="Left" Width="120" Margin="2" x:Name="OkButton">
+            <Button Grid.Row="1" Grid.Column="0" HorizontalAlignment="Left" Width="120" Margin="2" 
+                    Command="{Binding OkCommand}">
                 <TextBlock Text="Ok"/>
             </Button>
-            <Button Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" Width="120" Margin="2" x:Name="CancelButton">
+            <Button Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" Width="120" Margin="2"
+                    Command="{Binding CancelCommand}">
                 <TextBlock Text="Cancel"/>
             </Button>
         </Grid>
