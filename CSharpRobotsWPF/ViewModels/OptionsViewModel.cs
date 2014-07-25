@@ -162,7 +162,7 @@ namespace CSharpRobotsWPF.ViewModels
                     RobotInfos = robots.Select(x => new RobotInfoItem
                     {
                         Type = x,
-                        IsSelected = false, // TODO: retrieve previously selected value
+                        IsSelected = _lastSelectedRobots.FirstOrDefault(r => r == x.Name) != null,
                         Name = x.Name,
                     }).ToList();
                 }

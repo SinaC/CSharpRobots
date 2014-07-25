@@ -39,6 +39,7 @@
     <Compile Include="CrazyCannon.cs" />
     <Compile Include="HHRobot.cs" />
     <Compile Include="Broken\Phalanx.cs" />
+    <Compile Include="Broken\IonStorm.cs" />
     <Compile Include="Maruko.cs" />
     <Compile Include="Mouth.cs" />
     <Compile Include="Platoon.cs" />
