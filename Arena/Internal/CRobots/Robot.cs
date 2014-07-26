@@ -513,6 +513,12 @@ namespace Arena.Internal.CRobots
             LocY = locY;
         }
 
+        public void SetDamage(int damage)
+        {
+            if (_damage < 100) // only if not already dead
+                _damage = damage;
+        }
+
         #endregion
 
         private void MainLoop()

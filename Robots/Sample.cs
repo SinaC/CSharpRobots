@@ -20,7 +20,7 @@
 
         public override void Step()
         {
-            SDK.LogLine("STEP: {0} My position x:{0} y:{1}", SDK.Time, SDK.LocX, SDK.LocY);
+            SDK.LogLine("STEP: {0} My position x:{1} y:{2}", SDK.Time, SDK.LocX, SDK.LocY);
 
             // Find Target
             int targetAngle, targetRange;

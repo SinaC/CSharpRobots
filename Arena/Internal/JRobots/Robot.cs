@@ -351,7 +351,7 @@ namespace Arena.Internal.JRobots
             degrees = FixDegrees(degrees);
             speed = FixSpeed(speed);
 
-            if (_currentSpeed <= ParametersSingleton.MaxTurnSpeed) // Can change heading only if current speed is lower than max turn speed
+            if (_currentSpeed <= ParametersSingleton.MaxTurnSpeed && degrees != _heading) // Can change heading only if current speed is lower than max turn speed
             {
                 _heading = degrees; // change heading
                 _driveAngle = Common.Math.ToRadians(degrees);
@@ -569,6 +569,12 @@ namespace Arena.Internal.JRobots
         {
             _locX = locX;
             _locY = locY;
+        }
+
+        public void SetDamage(int damage)
+        {
+            if (_damage < 100) // only if not already dead
+                _damage = damage;
         }
 
         #endregion

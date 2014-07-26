@@ -63,13 +63,14 @@ namespace CSharpRobotsWPF
             //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Stinger), 500, 500, 50, 150));
             //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Rabbit), 500, 500, 50, 150));
             //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Target), 10, 10, 400, 500));
-            StartStopInternal(arena => arena.InitializeSolo(typeof(Robots.SinaC), 10, 10, 0, 0));
+            //StartStopInternal(arena => arena.InitializeSolo(typeof(Robots.Surveyor), 500, 500, 0, 0));
             //StartStopInternal(arena => arena.InitializeFreeMode(3, GetFreeModeCoordinates, typeof(Robots.SinaC), typeof(Robots.Target)));
             //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Target), 10, 10, 400, 500));
             //StartStopInternal(arena => arena.InitializeFreeMode(3, GetFreeModeCoordinates, typeof(Robots.SinaC), typeof(Robots.Target)));
             //StartStopInternal(arena => arena.InitializeDoubleMatch(typeof(Robots.SinaC), typeof(Robots.Maruko)));
             //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Target), 475, 500, 50, 150));
             //StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.SinaC), typeof(Robots.Maruko)));
+            StartStopInternal(arena => arena.InitializeSingleMatch(typeof(Robots.Surveyor), typeof(Robots.Bombarder), 500, 500, 400, 400));
         }
         
         private static Tuple<int, int> GetFreeModeCoordinates(int teamId, int robotId)
