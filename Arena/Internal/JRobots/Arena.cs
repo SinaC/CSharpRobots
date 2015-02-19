@@ -105,9 +105,12 @@ namespace Arena.Internal.JRobots
             get { return ParametersSingleton.Instance.Parameters; }
         }
 
-        public List<IReadonlyRobot> Robots
+        public IReadOnlyCollection<IReadonlyRobot> Robots
         {
             //http://stackoverflow.com/questions/3128889/lock-vs-toarray-for-thread-safe-foreach-access-of-list-collection
+            //http://stackoverflow.com/questions/24880268/ienumerable-vs-ireadonlycollection-vs-readonlycollection-for-exposing-a-list-mem
+            //http://stackoverflow.com/questions/491375/readonlycollection-or-ienumerable-for-exposing-member-collections
+            //http://stackoverflow.com/questions/491375/readonlycollection-or-ienumerable-for-exposing-member-collections/491591#491591
             get // Clone the list to avoid end-user to freeze arena with a Lock on Robots collection
             {
                 List<IReadonlyRobot> copy;
@@ -119,7 +122,7 @@ namespace Arena.Internal.JRobots
             }
         }
 
-        public List<IReadonlyMissile> Missiles
+        public IReadOnlyCollection<IReadonlyMissile> Missiles
         {
             get
             {

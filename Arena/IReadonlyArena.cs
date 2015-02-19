@@ -22,8 +22,8 @@ namespace Arena
         string WinningTeamName { get; }
         double MatchTime { get; }
 
-        List<IReadonlyRobot> Robots { get; }
-        List<IReadonlyMissile> Missiles { get; }
+        IReadOnlyCollection<IReadonlyRobot> Robots { get; }
+        IReadOnlyCollection<IReadonlyMissile> Missiles { get; }
 
         IReadOnlyDictionary<string, int> Parameters { get; }
 

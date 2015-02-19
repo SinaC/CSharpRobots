@@ -199,7 +199,7 @@ namespace CSharpRobotsWPF
             //Log.WriteLine(Log.LogLevels.Debug, "WPF - REFRESH");
 
             // Display missiles
-            List<IReadonlyMissile> missiles = _arena.Missiles;
+            IReadOnlyCollection<IReadonlyMissile> missiles = _arena.Missiles;
             // Update existing or delete missing
             foreach (WPFMissile wpfMissile in _wpfMissiles)
             {
@@ -217,7 +217,7 @@ namespace CSharpRobotsWPF
                     CreateMissile(missile);
             }
             // Display robots
-            List<IReadonlyRobot> robots = _arena.Robots;
+            IReadOnlyCollection<IReadonlyRobot> robots = _arena.Robots;
             foreach (WPFRobot wpfRobot in _wpfRobots)
             {
                 IReadonlyRobot robot = robots.FirstOrDefault(x => x.Id == wpfRobot.Id && x.Team == wpfRobot.Team);
